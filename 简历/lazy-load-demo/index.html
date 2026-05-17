@@ -1,0 +1,1196 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>图片懒加载 - 四种方案</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: #f5f5f5;
+      color: #333;
+    }
+
+    /* 导航 */
+    nav {
+      position: sticky;
+      top: 0;
+      background: #1a1a2e;
+      padding: 14px 24px;
+      display: flex;
+      gap: 20px;
+      z-index: 100;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+    }
+
+    nav a {
+      color: #a8b2d8;
+      text-decoration: none;
+      font-size: 14px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      transition: all 0.2s;
+    }
+
+    nav a:hover {
+      background: #16213e;
+      color: #fff;
+    }
+
+    /* 通用区块 */
+    section {
+      max-width: 900px;
+      margin: 40px auto;
+      background: #fff;
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+    }
+
+    .section-header {
+      padding: 24px 32px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .section-header h2 {
+      font-size: 20px;
+      margin-bottom: 6px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 3px 10px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-right: 8px;
+    }
+
+    .badge-green {
+      background: #d1fae5;
+      color: #065f46;
+    }
+
+    .badge-blue {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    .badge-yellow {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .badge-purple {
+      background: #ede9fe;
+      color: #5b21b6;
+    }
+
+    .badge-red {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .badge-teal {
+      background: #ccfbf1;
+      color: #134e4a;
+    }
+
+    .section-desc {
+      color: #666;
+      font-size: 14px;
+      margin-top: 8px;
+      line-height: 1.6;
+    }
+
+    .image-grid {
+      padding: 24px 32px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    /* 图片容器 */
+    .img-wrapper {
+      position: relative;
+      aspect-ratio: 4/3;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #e8e8e8;
+    }
+
+    .img-wrapper img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transition: opacity 0.4s ease;
+    }
+
+    /* 加载状态标签 */
+    .status-tag {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+    }
+
+    .status-pending {
+      background: rgba(0, 0, 0, 0.5);
+      color: #fff;
+    }
+
+    .status-loading {
+      background: #fbbf24;
+      color: #000;
+    }
+
+    .status-loaded {
+      background: #10b981;
+      color: #fff;
+    }
+
+    .status-cached {
+      background: #6366f1;
+      color: #fff;
+    }
+
+    /* 骨架屏动画 */
+    .skeleton {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(90deg, #e8e8e8 25%, #f5f5f5 50%, #e8e8e8 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0% {
+        background-position: 200% 0;
+      }
+
+      100% {
+        background-position: -200% 0;
+      }
+    }
+
+    .skeleton.hidden {
+      display: none;
+    }
+
+    /* 方案1：原生 loading=lazy */
+    #native img {
+      opacity: 0;
+    }
+
+    #native img.loaded {
+      opacity: 1;
+    }
+
+    /* 方案2：Intersection Observer */
+    #observer img[data-src] {
+      opacity: 0;
+    }
+
+    #observer img.lazy-loaded {
+      opacity: 1;
+    }
+
+    /* 方案3：背景图 */
+    .bg-image-grid {
+      padding: 24px 32px;
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .bg-lazy-item {
+      position: relative;
+      aspect-ratio: 4/3;
+      border-radius: 8px;
+      overflow: hidden;
+      background: #e8e8e8;
+      background-size: cover;
+      background-position: center;
+      transition: opacity 0.4s ease;
+    }
+
+    .bg-lazy-item .skeleton {
+      display: block;
+    }
+
+    .bg-lazy-item.bg-loaded .skeleton {
+      display: none;
+    }
+
+    .bg-lazy-item .status-tag {
+      z-index: 2;
+    }
+
+    /* 方案4：滚动事件 */
+    #scroll-event img[data-src] {
+      opacity: 0;
+    }
+
+    #scroll-event img.scroll-loaded {
+      opacity: 1;
+    }
+
+    /* 统计面板 */
+    .stats-bar {
+      display: flex;
+      gap: 24px;
+      padding: 16px 32px;
+      background: #f8f9fa;
+      border-top: 1px solid #f0f0f0;
+      font-size: 13px;
+      color: #555;
+    }
+
+    .stat-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .stat-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+    }
+
+    .dot-pending {
+      background: #9ca3af;
+    }
+
+    .dot-loaded {
+      background: #10b981;
+    }
+
+    .dot-cached {
+      background: #6366f1;
+    }
+
+    /* 缓存方案专用 */
+    .cache-controls {
+      padding: 16px 32px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      border-bottom: 1px solid #f0f0f0;
+    }
+
+    .btn {
+      padding: 8px 18px;
+      border: none;
+      border-radius: 8px;
+      font-size: 13px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .btn-primary {
+      background: #6366f1;
+      color: #fff;
+    }
+
+    .btn-primary:hover {
+      background: #4f46e5;
+    }
+
+    .btn-danger {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+
+    .btn-danger:hover {
+      background: #fecaca;
+    }
+
+    .btn-secondary {
+      background: #f3f4f6;
+      color: #374151;
+    }
+
+    .btn-secondary:hover {
+      background: #e5e7eb;
+    }
+
+    .cache-size-info {
+      margin-left: auto;
+      font-size: 13px;
+      color: #6b7280;
+      background: #f9fafb;
+      padding: 6px 14px;
+      border-radius: 20px;
+      border: 1px solid #e5e7eb;
+    }
+
+    .sub-section-title {
+      padding: 16px 32px 8px;
+      font-size: 14px;
+      font-weight: 700;
+      color: #374151;
+      border-top: 1px dashed #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sub-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 11px;
+      font-weight: 600;
+    }
+
+    .sub-badge-mem {
+      background: #fef3c7;
+      color: #92400e;
+    }
+
+    .sub-badge-api {
+      background: #dbeafe;
+      color: #1e40af;
+    }
+
+    /* 控制台日志区 */
+    .log-panel {
+      margin: 0 32px 24px;
+      background: #1e1e2e;
+      border-radius: 8px;
+      padding: 12px 16px;
+      max-height: 130px;
+      overflow-y: auto;
+      font-size: 12px;
+      font-family: 'Menlo', 'Monaco', monospace;
+    }
+
+    .log-entry {
+      color: #a6e3a1;
+      line-height: 1.8;
+    }
+
+    .log-entry .time {
+      color: #6c7086;
+      margin-right: 8px;
+    }
+
+    .log-entry .event-type {
+      color: #89b4fa;
+      margin-right: 6px;
+    }
+
+    /* 滚动提示 */
+    .scroll-hint {
+      text-align: center;
+      padding: 20px;
+      color: #999;
+      font-size: 14px;
+      border-top: 1px dashed #eee;
+    }
+
+    .arrow {
+      display: inline-block;
+      animation: bounce 1s infinite;
+    }
+
+    @keyframes bounce {
+
+      0%,
+      100% {
+        transform: translateY(0);
+      }
+
+      50% {
+        transform: translateY(6px);
+      }
+    }
+
+    /* 代码块 */
+    .code-block {
+      margin: 0 32px 24px;
+      background: #282c34;
+      border-radius: 8px;
+      padding: 16px;
+      font-size: 12px;
+      font-family: 'Menlo', monospace;
+      color: #abb2bf;
+      line-height: 1.7;
+      overflow-x: auto;
+    }
+
+    .code-block .kw {
+      color: #c678dd;
+    }
+
+    .code-block .fn {
+      color: #61afef;
+    }
+
+    .code-block .str {
+      color: #98c379;
+    }
+
+    .code-block .cm {
+      color: #5c6370;
+      font-style: italic;
+    }
+
+    footer {
+      text-align: center;
+      padding: 40px;
+      color: #999;
+      font-size: 13px;
+    }
+  </style>
+</head>
+
+<body>
+
+  <nav>
+    <a href="#native">方案1：原生属性</a>
+    <a href="#observer">方案2：IntersectionObserver</a>
+    <a href="#background">方案3：背景图</a>
+    <a href="#scroll-event">方案4：滚动事件</a>
+    <a href="#cache">方案5：缓存</a>
+  </nav>
+
+  <!-- ===================== 方案1：原生 loading=lazy ===================== -->
+  <section id="native">
+    <div class="section-header">
+      <h2>
+        <span class="badge badge-green">方案1</span>
+        原生 <code>loading="lazy"</code>
+      </h2>
+      <p class="section-desc">
+        浏览器内置懒加载，仅需一个 HTML 属性，零 JavaScript。浏览器自动决定何时加载（通常在视口附近）。<br>
+        <strong>适用：</strong>追求简洁，无需精细控制加载时机的场景。
+      </p>
+    </div>
+
+    <div class="code-block">
+      <span class="cm">&lt;!-- 仅需添加 loading="lazy" 属性 --&gt;</span>
+      <span class="kw">&lt;img</span> src=<span class="str">"image.jpg"</span> <span class="fn">loading</span>=<span
+        class="str">"lazy"</span> alt=<span class="str">"..."</span><span class="kw">&gt;</span>
+    </div>
+
+    <div class="image-grid" id="native-grid">
+      <!-- 由 JS 动态生成 -->
+    </div>
+
+    <div class="stats-bar" id="native-stats">
+      <span class="stat-item"><span class="stat-dot dot-loaded"></span><span id="native-loaded-count">0</span>
+        已加载</span>
+      <span class="stat-item"><span class="stat-dot dot-pending"></span><span id="native-pending-count">6</span>
+        等待中</span>
+    </div>
+
+    <div class="log-panel" id="native-log">
+      <div class="log-entry"><span class="time">--</span>等待图片加载...</div>
+    </div>
+  </section>
+
+  <!-- ===================== 方案2：Intersection Observer ===================== -->
+  <section id="observer">
+    <div class="section-header">
+      <h2>
+        <span class="badge badge-blue">方案2</span>
+        Intersection Observer API
+      </h2>
+      <p class="section-desc">
+        使用 <code>data-src</code> 存储真实地址，进入视口时替换。可精细控制 <code>rootMargin</code>（提前量）和 <code>threshold</code>（可见比例）。<br>
+        <strong>适用：</strong>需要精确控制、配合骨架屏/动效的场景（推荐方案）。
+      </p>
+    </div>
+
+    <div class="code-block">
+      <span class="kw">const</span> observer = <span class="kw">new</span> <span
+        class="fn">IntersectionObserver</span>((entries) => {
+      entries.<span class="fn">forEach</span>(entry => {
+      <span class="kw">if</span> (entry.isIntersecting) {
+      <span class="kw">const</span> img = entry.target;
+      img.src = img.dataset.src; <span class="cm">// 替换真实地址</span>
+      img.<span class="fn">removeAttribute</span>(<span class="str">'data-src'</span>);
+      observer.<span class="fn">unobserve</span>(img); <span class="cm">// 停止观察</span>
+      }
+      });
+      }, { rootMargin: <span class="str">'100px'</span> }); <span class="cm">// 提前 100px 触发</span>
+
+      document.<span class="fn">querySelectorAll</span>(<span class="str">'img[data-src]'</span>)
+      .<span class="fn">forEach</span>(img => observer.<span class="fn">observe</span>(img));
+    </div>
+
+    <div class="image-grid" id="observer-grid">
+      <!-- 由 JS 动态生成 -->
+    </div>
+
+    <div class="stats-bar" id="observer-stats">
+      <span class="stat-item"><span class="stat-dot dot-loaded"></span><span id="observer-loaded-count">0</span>
+        已加载</span>
+      <span class="stat-item"><span class="stat-dot dot-pending"></span><span id="observer-pending-count">6</span>
+        等待中</span>
+    </div>
+
+    <div class="log-panel" id="observer-log">
+      <div class="log-entry"><span class="time">--</span>等待图片进入视口...</div>
+    </div>
+  </section>
+
+  <!-- ===================== 方案3：背景图懒加载 ===================== -->
+  <section id="background">
+    <div class="section-header">
+      <h2>
+        <span class="badge badge-yellow">方案3</span>
+        CSS 背景图懒加载
+      </h2>
+      <p class="section-desc">
+        背景图无法使用 <code>loading="lazy"</code>，通过 Intersection Observer 动态添加 class，触发背景图加载。<br>
+        <strong>适用：</strong>卡片封面、Banner 等使用 CSS background-image 的元素。
+      </p>
+    </div>
+
+    <div class="code-block">
+      <span class="cm">/* CSS：默认无背景图，loaded 后才添加 */</span>
+      .<span class="fn">bg-lazy</span> { background-image: <span class="str">none</span>; }
+      .<span class="fn">bg-lazy.loaded</span> { background-image: <span class="fn">url</span>(<span
+        class="str">'real-bg.jpg'</span>); }
+
+      <span class="cm">// JS：进入视口时添加 loaded class</span>
+      <span class="kw">if</span> (entry.isIntersecting) {
+      entry.target.style.backgroundImage = <span class="str">`url(${entry.target.dataset.bg})`</span>;
+      entry.target.<span class="fn">classList.add</span>(<span class="str">'bg-loaded'</span>);
+      }
+    </div>
+
+    <div class="bg-image-grid" id="bg-grid">
+      <!-- 由 JS 动态生成 -->
+    </div>
+
+    <div class="stats-bar" id="bg-stats">
+      <span class="stat-item"><span class="stat-dot dot-loaded"></span><span id="bg-loaded-count">0</span> 已加载</span>
+      <span class="stat-item"><span class="stat-dot dot-pending"></span><span id="bg-pending-count">6</span> 等待中</span>
+    </div>
+
+    <div class="log-panel" id="bg-log">
+      <div class="log-entry"><span class="time">--</span>等待背景图进入视口...</div>
+    </div>
+  </section>
+
+  <!-- ===================== 方案4：滚动事件 ===================== -->
+  <section id="scroll-event">
+    <div class="section-header">
+      <h2>
+        <span class="badge badge-purple">方案4</span>
+        scroll 事件监听（兼容方案）
+      </h2>
+      <p class="section-desc">
+        监听 window scroll 事件，用 <code>getBoundingClientRect()</code> 判断是否进入视口。性能差，需节流，仅用于需兼容旧浏览器（IE11）的场景。<br>
+        <strong>注意：</strong>每次滚动都触发计算，务必配合 throttle 使用。
+      </p>
+    </div>
+
+    <div class="code-block">
+      <span class="kw">function</span> <span class="fn">isInViewport</span>(el) {
+      <span class="kw">const</span> rect = el.<span class="fn">getBoundingClientRect</span>();
+      <span class="kw">return</span> rect.top &lt;= window.innerHeight + <span class="str">100</span>; <span
+        class="cm">// 提前 100px</span>
+      }
+
+      <span class="kw">let</span> timer;
+      window.<span class="fn">addEventListener</span>(<span class="str">'scroll'</span>, () => {
+      <span class="kw">if</span> (timer) <span class="kw">return</span>; <span class="cm">// 节流：200ms 内只执行一次</span>
+      timer = <span class="fn">setTimeout</span>(() => {
+      <span class="fn">lazyLoad</span>();
+      timer = <span class="kw">null</span>;
+      }, <span class="str">200</span>);
+      });
+    </div>
+
+    <div class="image-grid" id="scroll-grid">
+      <!-- 由 JS 动态生成 -->
+    </div>
+
+    <div class="stats-bar" id="scroll-stats">
+      <span class="stat-item"><span class="stat-dot dot-loaded"></span><span id="scroll-loaded-count">0</span>
+        已加载</span>
+      <span class="stat-item"><span class="stat-dot dot-pending"></span><span id="scroll-pending-count">6</span>
+        等待中</span>
+      <span class="stat-item" id="scroll-trigger-stat">触发次数：<span id="scroll-trigger-count">0</span></span>
+    </div>
+
+    <div class="log-panel" id="scroll-log">
+      <div class="log-entry"><span class="time">--</span>等待滚动触发...</div>
+    </div>
+  </section>
+
+  <!-- ===================== 方案5：缓存 ===================== -->
+  <section id="cache">
+    <div class="section-header">
+      <h2>
+        <span class="badge badge-teal">方案5</span>
+        缓存懒加载（内存缓存 + Cache API）
+      </h2>
+      <p class="section-desc">
+        相同资源只请求一次，之后命中缓存直接读取，无网络请求。<br>
+        <strong>内存缓存（Map）：</strong>用 <code>Map&lt;url, ObjectURL&gt;</code> 存储当前 session 的 Blob，刷新后失效。<br>
+        <strong>Cache API：</strong>存入浏览器 Cache Storage，跨页面、跨刷新持久有效，类似 Service Worker 缓存。
+      </p>
+    </div>
+
+    <div class="code-block">
+      <span class="cm">// ① 内存缓存：用 Map 存 ObjectURL，同一页面内命中</span>
+      <span class="kw">const</span> memCache = <span class="kw">new</span> <span class="fn">Map</span>();
+      <span class="kw">if</span> (memCache.<span class="fn">has</span>(url)) {
+      img.src = memCache.<span class="fn">get</span>(url); <span class="cm">// 直接复用，无请求</span>
+      } <span class="kw">else</span> {
+      <span class="kw">const</span> blob = <span class="kw">await</span> <span class="fn">fetch</span>(url).<span
+        class="fn">then</span>(r => r.<span class="fn">blob</span>());
+      <span class="kw">const</span> objectUrl = URL.<span class="fn">createObjectURL</span>(blob);
+      memCache.<span class="fn">set</span>(url, objectUrl); <span class="cm">// 存入 Map</span>
+      img.src = objectUrl;
+      }
+
+      <span class="cm">// ② Cache API：持久化存储，刷新后仍命中</span>
+      <span class="kw">const</span> cache = <span class="kw">await</span> caches.<span class="fn">open</span>(<span
+        class="str">'my-img-cache'</span>);
+      <span class="kw">const</span> cached = <span class="kw">await</span> cache.<span class="fn">match</span>(url);
+      <span class="kw">if</span> (cached) {
+      img.src = URL.<span class="fn">createObjectURL</span>(<span class="kw">await</span> cached.<span
+        class="fn">blob</span>());
+      } <span class="kw">else</span> {
+      <span class="kw">const</span> response = <span class="kw">await</span> <span class="fn">fetch</span>(url);
+      <span class="kw">await</span> cache.<span class="fn">put</span>(url, response.<span class="fn">clone</span>());
+      <span class="cm">// 存入 Cache Storage</span>
+      img.src = URL.<span class="fn">createObjectURL</span>(<span class="kw">await</span> response.<span
+        class="fn">blob</span>());
+      }
+    </div>
+
+    <!-- 5a：内存缓存 -->
+    <div class="sub-section-title">
+      <span class="sub-badge sub-badge-mem">5a</span>
+      内存缓存（Map + ObjectURL）
+      <small style="color:#9ca3af; font-weight:400">— 当前页面内有效，刷新失效</small>
+    </div>
+
+    <div class="cache-controls">
+      <span style="font-size:13px; color:#555;">向下滚动加载图片，然后<strong>刷新页面内区域</strong>观察：第二次滚过时命中缓存（紫色标签）</span>
+    </div>
+
+    <div class="image-grid" id="mem-grid"></div>
+
+    <div class="stats-bar">
+      <span class="stat-item"><span class="stat-dot" style="background:#10b981"></span>网络加载：<span
+          id="mem-net-count">0</span></span>
+      <span class="stat-item"><span class="stat-dot dot-cached"></span>内存缓存命中：<span id="mem-cache-count">0</span></span>
+      <span class="stat-item"><span class="stat-dot dot-pending"></span>等待中：<span id="mem-pending-count">6</span></span>
+    </div>
+
+    <div class="log-panel" id="mem-log">
+      <div class="log-entry"><span class="time">--</span>等待图片进入视口...</div>
+    </div>
+
+    <!-- 5b：Cache API -->
+    <div class="sub-section-title" style="margin-top:8px;">
+      <span class="sub-badge sub-badge-api">5b</span>
+      Cache API（跨刷新持久缓存）
+      <small style="color:#9ca3af; font-weight:400">— 刷新页面后再滚动，仍命中缓存</small>
+    </div>
+
+    <div class="cache-controls">
+      <button class="btn btn-danger" id="btn-clear-cache">清除 Cache Storage</button>
+      <span class="cache-size-info" id="cache-size">计算中...</span>
+    </div>
+
+    <div class="image-grid" id="api-grid"></div>
+
+    <div class="stats-bar">
+      <span class="stat-item"><span class="stat-dot" style="background:#10b981"></span>网络加载：<span
+          id="api-net-count">0</span></span>
+      <span class="stat-item"><span class="stat-dot dot-cached"></span>Cache API 命中：<span
+          id="api-cache-count">0</span></span>
+      <span class="stat-item"><span class="stat-dot dot-pending"></span>等待中：<span id="api-pending-count">6</span></span>
+    </div>
+
+    <div class="log-panel" id="api-log">
+      <div class="log-entry"><span class="time">--</span>等待图片进入视口...</div>
+    </div>
+  </section>
+
+  <footer>
+    图片来源：picsum.photos &nbsp;·&nbsp; 五种懒加载方案对比演示
+  </footer>
+
+  <script>
+    // ================================================================
+    // 工具函数
+    // ================================================================
+
+    // 格式化时间戳
+    function timestamp() {
+      const d = new Date();
+      return `${String(d.getMinutes()).padStart(2, '0')}:${String(d.getSeconds()).padStart(2, '0')}.${String(d.getMilliseconds()).padStart(3, '0')}`;
+    }
+
+    // 向日志面板追加一条记录
+    function addLog(panelId, eventType, message) {
+      const panel = document.getElementById(panelId);
+      // 清除初始占位
+      if (panel.children.length === 1 && panel.children[0].textContent.includes('等待')) {
+        panel.innerHTML = '';
+      }
+      const entry = document.createElement('div');
+      entry.className = 'log-entry';
+      entry.innerHTML = `<span class="time">${timestamp()}</span><span class="event-type">[${eventType}]</span>${message}`;
+      panel.appendChild(entry);
+      panel.scrollTop = panel.scrollHeight;
+    }
+
+    // 更新统计数字
+    function updateStats(prefix, loadedCount, totalCount) {
+      document.getElementById(`${prefix}-loaded-count`).textContent = loadedCount;
+      document.getElementById(`${prefix}-pending-count`).textContent = totalCount - loadedCount;
+    }
+
+    // 图片 ID 列表（使用 picsum 随机图）
+    const IMAGE_IDS = [10, 20, 30, 40, 50, 60];
+    const TOTAL = IMAGE_IDS.length;
+
+    // 生成图片 URL
+    function imgUrl(id, width = 400, height = 300) {
+      return `https://picsum.photos/id/${id}/${width}/${height}`;
+    }
+
+    // ================================================================
+    // 方案1：原生 loading="lazy"
+    // ================================================================
+    (function setupNative() {
+      const grid = document.getElementById('native-grid');
+      let loadedCount = 0;
+
+      IMAGE_IDS.forEach((id, i) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'img-wrapper';
+
+        const skeleton = document.createElement('div');
+        skeleton.className = 'skeleton';
+
+        const tag = document.createElement('span');
+        tag.className = 'status-tag status-pending';
+        tag.textContent = '等待';
+
+        const img = document.createElement('img');
+        img.src = imgUrl(id);
+        img.loading = 'lazy';   // 关键属性
+        img.alt = `图片 ${i + 1}`;
+
+        img.addEventListener('load', () => {
+          img.classList.add('loaded');
+          skeleton.classList.add('hidden');
+          tag.className = 'status-tag status-loaded';
+          tag.textContent = '已加载';
+          loadedCount++;
+          updateStats('native', loadedCount, TOTAL);
+          addLog('native-log', 'LOAD', `图片 #${id} 加载完成`);
+        });
+
+        wrapper.appendChild(skeleton);
+        wrapper.appendChild(tag);
+        wrapper.appendChild(img);
+        grid.appendChild(wrapper);
+      });
+    })();
+
+    // ================================================================
+    // 方案2：Intersection Observer
+    // ================================================================
+    (function setupObserver() {
+      const grid = document.getElementById('observer-grid');
+      let loadedCount = 0;
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+
+          const img = entry.target;
+          const wrapper = img.parentElement;
+          const tag = wrapper.querySelector('.status-tag');
+          const skeleton = wrapper.querySelector('.skeleton');
+
+          tag.className = 'status-tag status-loading';
+          tag.textContent = '加载中';
+
+          img.src = img.dataset.src;
+          img.removeAttribute('data-src');
+          observer.unobserve(img);
+
+          img.addEventListener('load', () => {
+            img.classList.add('lazy-loaded');
+            skeleton.classList.add('hidden');
+            tag.className = 'status-tag status-loaded';
+            tag.textContent = '已加载';
+            loadedCount++;
+            updateStats('observer', loadedCount, TOTAL);
+            addLog('observer-log', 'INTERSECT', `图片 #${img.alt.replace('图片 ', '')} 进入视口，加载完成`);
+          });
+        });
+      }, {
+        rootMargin: '80px',   // 提前 80px 开始加载
+        threshold: 0.1
+      });
+
+      IMAGE_IDS.forEach((id, i) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'img-wrapper';
+
+        const skeleton = document.createElement('div');
+        skeleton.className = 'skeleton';
+
+        const tag = document.createElement('span');
+        tag.className = 'status-tag status-pending';
+        tag.textContent = '等待';
+
+        const img = document.createElement('img');
+        img.dataset.src = imgUrl(id);  // 真实地址存 data-src
+        img.alt = `图片 ${i + 1}`;
+
+        wrapper.appendChild(skeleton);
+        wrapper.appendChild(tag);
+        wrapper.appendChild(img);
+        grid.appendChild(wrapper);
+
+        observer.observe(img);  // 开始观察
+      });
+    })();
+
+    // ================================================================
+    // 方案3：背景图懒加载
+    // ================================================================
+    (function setupBackground() {
+      const grid = document.getElementById('bg-grid');
+      let loadedCount = 0;
+
+      const observer = new IntersectionObserver((entries) => {
+        entries.forEach(entry => {
+          if (!entry.isIntersecting) return;
+
+          const el = entry.target;
+          const tag = el.querySelector('.status-tag');
+          const skeleton = el.querySelector('.skeleton');
+          const bgUrl = el.dataset.bg;
+
+          tag.className = 'status-tag status-loading';
+          tag.textContent = '加载中';
+
+          // 预加载图片，完成后再设置背景
+          const tempImg = new Image();
+          tempImg.onload = () => {
+            el.style.backgroundImage = `url(${bgUrl})`;
+            el.classList.add('bg-loaded');
+            skeleton.style.display = 'none';
+            tag.className = 'status-tag status-loaded';
+            tag.textContent = '已加载';
+            loadedCount++;
+            updateStats('bg', loadedCount, TOTAL);
+            addLog('bg-log', 'BG-LOAD', `背景图 #${el.dataset.id} 加载完成`);
+          };
+          tempImg.src = bgUrl;
+
+          observer.unobserve(el);
+        });
+      }, { rootMargin: '80px' });
+
+      IMAGE_IDS.forEach((id) => {
+        const item = document.createElement('div');
+        item.className = 'bg-lazy-item';
+        item.dataset.bg = imgUrl(id);
+        item.dataset.id = id;
+
+        const skeleton = document.createElement('div');
+        skeleton.className = 'skeleton';
+
+        const tag = document.createElement('span');
+        tag.className = 'status-tag status-pending';
+        tag.textContent = '等待';
+
+        item.appendChild(skeleton);
+        item.appendChild(tag);
+        grid.appendChild(item);
+
+        observer.observe(item);
+      });
+    })();
+
+    // ================================================================
+    // 方案4：scroll 事件 + 节流
+    // ================================================================
+    (function setupScrollEvent() {
+      const grid = document.getElementById('scroll-grid');
+      let loadedCount = 0;
+      let scrollTriggerCount = 0;
+      const pendingImgs = [];
+
+      function isInViewport(el) {
+        const rect = el.getBoundingClientRect();
+        return rect.top <= window.innerHeight + 100 && rect.bottom >= 0;
+      }
+
+      function lazyLoadImages() {
+        scrollTriggerCount++;
+        document.getElementById('scroll-trigger-count').textContent = scrollTriggerCount;
+
+        // 倒序遍历，方便 splice 移除
+        for (let i = pendingImgs.length - 1; i >= 0; i--) {
+          const img = pendingImgs[i];
+          if (isInViewport(img)) {
+            const wrapper = img.parentElement;
+            const tag = wrapper.querySelector('.status-tag');
+            const skeleton = wrapper.querySelector('.skeleton');
+
+            tag.className = 'status-tag status-loading';
+            tag.textContent = '加载中';
+
+            img.src = img.dataset.src;
+            img.removeAttribute('data-src');
+            pendingImgs.splice(i, 1);  // 从待加载列表移除
+
+            img.addEventListener('load', () => {
+              img.classList.add('scroll-loaded');
+              skeleton.classList.add('hidden');
+              tag.className = 'status-tag status-loaded';
+              tag.textContent = '已加载';
+              loadedCount++;
+              updateStats('scroll', loadedCount, TOTAL);
+              addLog('scroll-log', 'SCROLL', `图片 #${img.dataset.originalId} 加载完成（第${scrollTriggerCount}次触发）`);
+            });
+          }
+        }
+      }
+
+      // 节流：200ms 内只执行一次
+      let throttleTimer = null;
+      window.addEventListener('scroll', () => {
+        if (throttleTimer) return;
+        throttleTimer = setTimeout(() => {
+          lazyLoadImages();
+          throttleTimer = null;
+        }, 200);
+      });
+
+      IMAGE_IDS.forEach((id, i) => {
+        const wrapper = document.createElement('div');
+        wrapper.className = 'img-wrapper';
+
+        const skeleton = document.createElement('div');
+        skeleton.className = 'skeleton';
+
+        const tag = document.createElement('span');
+        tag.className = 'status-tag status-pending';
+        tag.textContent = '等待';
+
+        const img = document.createElement('img');
+        img.dataset.src = imgUrl(id);
+        img.dataset.originalId = id;
+        img.alt = `图片 ${i + 1}`;
+
+        wrapper.appendChild(skeleton);
+        wrapper.appendChild(tag);
+        wrapper.appendChild(img);
+        grid.appendChild(wrapper);
+
+        pendingImgs.push(img);
+      });
+
+      // 初始执行一次（处理首屏内的图片）
+      lazyLoadImages();
+    })();
+
+
+    // ================================================================
+    // 方案5：缓存懒加载
+    // 5a - 内存缓存 (Map)：当前 session 内命中缓存，跳过网络请求
+    // 5b - Cache API：跨页面持久化缓存，刷新后仍从缓存读取
+    // ================================================================
+    (function setupCache() {
+
+      // ---- 5a：内存缓存（Map<url, ObjectURL>）----
+      const memCache = new Map();
+
+      function loadWithMemCache(img, url, tag, skeleton, onDone) {
+        if (memCache.has(url)) {
+          // 命中内存缓存：直接使用已有 ObjectURL
+          img.src = memCache.get(url);
+          tag.className = 'status-tag status-cached';
+          tag.textContent = '内存缓存';
+          skeleton.classList.add('hidden');
+          img.style.opacity = 1;
+          onDone('mem-hit');
+          addLog('mem-log', 'MEM-HIT', `${url.split('/').slice(-2).join('/')} 命中内存缓存，无网络请求`);
+          return;
+        }
+
+        tag.className = 'status-tag status-loading';
+        tag.textContent = '加载中';
+
+        // 通过 fetch 拿到 Blob，转成 ObjectURL 并存入 Map
+        fetch(url)
+          .then(r => r.blob())
+          .then(blob => {
+            const objectUrl = URL.createObjectURL(blob);
+            memCache.set(url, objectUrl);
+            img.src = objectUrl;
+            img.onload = () => {
+              tag.className = 'status-tag status-loaded';
+              tag.textContent = '网络加载';
+              skeleton.classList.add('hidden');
+              img.style.opacity = 1;
+              onDone('net');
+              addLog('mem-log', 'NET', `${url.split('/').slice(-2).join('/')} 首次加载，已存入内存缓存`);
+            };
+          });
+      }
+
+      // ---- 5b：Cache API（跨刷新持久化）----
+      const CACHE_NAME = 'lazy-img-cache-v1';
+
+      async function loadWithCacheAPI(img, url, tag, skeleton, onDone) {
+        const cache = await caches.open(CACHE_NAME);
+        const cached = await cache.match(url);
+
+        if (cached) {
+          const blob = await cached.blob();
+          img.src = URL.createObjectURL(blob);
+          tag.className = 'status-tag status-cached';
+          tag.textContent = 'Cache API';
+          skeleton.classList.add('hidden');
+          img.style.opacity = 1;
+          onDone('cache-api-hit');
+          addLog('api-log', 'CACHE-HIT', `${url.split('/').slice(-2).join('/')} 命中 Cache API，未发出请求`);
+          await updateCacheSize();
+          return;
+        }
+
+        tag.className = 'status-tag status-loading';
+        tag.textContent = '加载中';
+
+        const response = await fetch(url);
+        await cache.put(url, response.clone());           // 存入 Cache Storage
+        const blob = await response.blob();
+        img.src = URL.createObjectURL(blob);
+        img.onload = async () => {
+          tag.className = 'status-tag status-loaded';
+          tag.textContent = '网络加载';
+          skeleton.classList.add('hidden');
+          img.style.opacity = 1;
+          onDone('net');
+          addLog('api-log', 'NET', `${url.split('/').slice(-2).join('/')} 首次加载，已存入 Cache Storage`);
+          await updateCacheSize();
+        };
+      }
+
+      async function updateCacheSize() {
+        if (!navigator.storage || !navigator.storage.estimate) return;
+        const { usage } = await navigator.storage.estimate();
+        if (usage) {
+          document.getElementById('cache-size').textContent =
+            `Cache Storage 已用：${(usage / 1024).toFixed(1)} KB`;
+        }
+      }
+
+      // ---- 构建 UI ----
+      function buildGrid(containerId, loadFn, prefix) {
+        const grid = document.getElementById(containerId);
+        let loadedCount = 0, cacheCount = 0;
+
+        const observer = new IntersectionObserver((entries) => {
+          entries.forEach(entry => {
+            if (!entry.isIntersecting) return;
+            const wrapper = entry.target;
+            const img = wrapper.querySelector('img');
+            const tag = wrapper.querySelector('.status-tag');
+            const skeleton = wrapper.querySelector('.skeleton');
+            const url = wrapper.dataset.url;
+            observer.unobserve(wrapper);
+
+            loadFn(img, url, tag, skeleton, (result) => {
+              if (result.includes('hit')) cacheCount++; else loadedCount++;
+              document.getElementById(`${prefix}-net-count`).textContent = loadedCount;
+              document.getElementById(`${prefix}-cache-count`).textContent = cacheCount;
+              document.getElementById(`${prefix}-pending-count`).textContent =
+                IMAGE_IDS.length - loadedCount - cacheCount;
+            });
+          });
+        }, { rootMargin: '80px' });
+
+        IMAGE_IDS.forEach(id => {
+          const url = imgUrl(id);
+          const wrapper = document.createElement('div');
+          wrapper.className = 'img-wrapper';
+          wrapper.dataset.url = url;
+
+          const skeleton = document.createElement('div');
+          skeleton.className = 'skeleton';
+
+          const tag = document.createElement('span');
+          tag.className = 'status-tag status-pending';
+          tag.textContent = '等待';
+
+          const img = document.createElement('img');
+          img.style.cssText = 'opacity:0; transition: opacity 0.4s';
+          img.alt = `图片 ${id}`;
+
+          wrapper.appendChild(skeleton);
+          wrapper.appendChild(tag);
+          wrapper.appendChild(img);
+          grid.appendChild(wrapper);
+          observer.observe(wrapper);
+        });
+      }
+
+      buildGrid('mem-grid', loadWithMemCache, 'mem');
+      buildGrid('api-grid', loadWithCacheAPI, 'api');
+
+      // 清除 Cache API 缓存
+      document.getElementById('btn-clear-cache').addEventListener('click', async () => {
+        await caches.delete(CACHE_NAME);
+        addLog('api-log', 'CLEAR', '已清除 Cache Storage，下次滚动将重新从网络加载');
+        document.getElementById('cache-size').textContent = 'Cache Storage 已清除';
+        // 重置 api-grid 显示
+        document.querySelectorAll('#api-grid .img-wrapper').forEach(wrapper => {
+          const img = wrapper.querySelector('img');
+          const tag = wrapper.querySelector('.status-tag');
+          const skeleton = wrapper.querySelector('.skeleton');
+          img.src = '';
+          img.style.opacity = 0;
+          tag.className = 'status-tag status-pending';
+          tag.textContent = '等待';
+          skeleton.classList.remove('hidden');
+          skeleton.style.display = '';
+        });
+        document.getElementById('api-net-count').textContent = 0;
+        document.getElementById('api-cache-count').textContent = 0;
+        document.getElementById('api-pending-count').textContent = IMAGE_IDS.length;
+        // 重新触发 observer（重新构建 api-grid）
+        document.getElementById('api-grid').innerHTML = '';
+        buildGrid('api-grid', loadWithCacheAPI, 'api');
+      });
+
+      updateCacheSize();
+    })();
+  </script>
+
+</body>
+
+</html>

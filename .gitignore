@@ -1,0 +1,13 @@
+# Dependencies
+**/node_modules/
+
+# macOS
+.DS_Store
+**/.DS_Store
+
+# Claude Code local settings (keep commands, ignore local overrides)
+**/.claude/settings.local.json
+
+# Environment variables
+**/.env*.local
+**/.env.local

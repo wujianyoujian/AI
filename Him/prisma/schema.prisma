@@ -1,0 +1,84 @@
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id        String   @id @default(cuid())
+  name      String   @default("Me")
+  settings  String   @default("{}")
+  createdAt DateTime @default(now())
+
+  conversations Conversation[]
+  ideas         Idea[]
+}
+
+model Conversation {
+  id             String   @id @default(cuid())
+  userId         String
+  title          String   @default("New Conversation")
+  summary        String   @default("")
+  coverImageUrl  String   @default("")
+  moodTags       String   @default("[]")
+  aiProvider     String   @default("openai")
+  role           String   @default("therapist")
+  voiceConfig    String   @default("{}")
+  musicPlaylist  String   @default("[]")
+  isPrivate      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user     User      @relation(fields: [userId], references: [id])
+  messages Message[]
+  ideas    Idea[]
+  music    MusicRecommendation[]
+}
+
+model Message {
+  id               String   @id @default(cuid())
+  conversationId   String
+  role             String   // "user" | "assistant"
+  contentPrimary   String
+  contentSecondary String   @default("")
+  audioUrl         String   @default("")
+  duration         Int      @default(0)
+  isIdeaMarked     Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  idea         Idea?
+}
+
+model Idea {
+  id               String   @id @default(cuid())
+  userId           String
+  conversationId   String?
+  messageId        String?  @unique
+  rawContent       String
+  enhancedContent  String   @default("{}")
+  tags             String   @default("[]")
+  status           String   @default("draft") // "draft" | "enhanced" | "archived"
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  user         User          @relation(fields: [userId], references: [id])
+  conversation Conversation? @relation(fields: [conversationId], references: [id])
+  message      Message?      @relation(fields: [messageId], references: [id])
+}
+
+model MusicRecommendation {
+  id             String   @id @default(cuid())
+  conversationId String
+  trackName      String
+  artist         String
+  platform       String   @default("")
+  externalUrl    String   @default("")
+  moodTags       String   @default("[]")
+  recommendedAt  DateTime @default(now())
+
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+}
