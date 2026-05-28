@@ -8,6 +8,6 @@ export default (): TypeOrmModuleOptions => ({
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_DATABASE || 'ai_agent',
   entities: [__dirname + '/../**/*.entity{.ts,.js}'],
-  synchronize: false,
+  synchronize: true,
   migrations: [__dirname + '/../migrations/*{.ts,.js}'],
 });
