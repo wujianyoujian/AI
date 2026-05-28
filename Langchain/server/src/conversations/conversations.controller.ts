@@ -7,6 +7,7 @@ import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
 import { AgentService } from '../agent/agent.service';
+import { TemplatesService } from '../templates/templates.service';
 import { MessageRole } from './entities/message.entity';
 
 interface MessageEvent {
@@ -19,6 +20,7 @@ export class ConversationsController {
   constructor(
     private conversationsService: ConversationsService,
     private agentService: AgentService,
+    private templatesService: TemplatesService,
   ) {}
 
   @Get()
@@ -60,12 +62,24 @@ export class ConversationsController {
             streamMessageDto.content,
           );
 
+          let systemPrompt: string | undefined;
+
+          if (streamMessageDto.templateId) {
+            const latestVersion = await this.templatesService.getLatestVersion(
+              streamMessageDto.templateId,
+            );
+            systemPrompt = this.templatesService.renderTemplate(
+              latestVersion.content,
+              streamMessageDto.variables || {},
+            );
+          }
+
           let fullResponse = '';
 
           for await (const token of this.agentService.streamResponse(
             id,
             streamMessageDto.content,
-            undefined,
+            systemPrompt,
           )) {
             fullResponse += token;
             subscriber.next({ data: JSON.stringify({ token }) });
