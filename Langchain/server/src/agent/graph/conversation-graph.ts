@@ -1,4 +1,4 @@
-import { StateGraph, Annotation, messagesStateReducer, CompiledStateGraph } from '@langchain/langgraph';
+import { StateGraph, Annotation, messagesStateReducer, CompiledStateGraph, MemorySaver } from '@langchain/langgraph';
 import { ChatDeepSeek } from '@langchain/deepseek';
 import { SystemMessage, AIMessage, BaseMessage } from '@langchain/core/messages';
 
@@ -32,7 +32,7 @@ export class ConversationGraph {
   }
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  compile(): CompiledStateGraph<any, any, any> {
+  compile(checkpointer: MemorySaver): CompiledStateGraph<any, any, any> {
     const graph = new StateGraph(ConversationAnnotation)
       .addNode('prepare_context', this.prepareContext.bind(this))
       .addNode('call_model', this.callModel.bind(this))
@@ -40,7 +40,7 @@ export class ConversationGraph {
       .addEdge('prepare_context', 'call_model')
       .addEdge('call_model', '__end__');
 
-    return graph.compile() as CompiledStateGraph<any, any, any>;
+    return graph.compile({ checkpointer }) as CompiledStateGraph<any, any, any>;
   }
 
   private async prepareContext(state: ConversationStateType): Promise<Partial<ConversationStateType>> {
