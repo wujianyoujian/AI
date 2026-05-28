@@ -9,6 +9,11 @@
 
 基于现有 React + NestJS + PostgreSQL 技术栈，构建一个支持多用户的 AI Agent 平台，核心功能为智能问答（多轮对话）和提示词模板管理（含版本控制与权限）。AI 层使用 LangGraph 管理 Agent 状态，DeepSeek 作为 LLM，通过 SSE 实现流式输出。
 
+**技术选型补充：**
+- ORM：TypeORM（NestJS 官方集成，支持 PostgreSQL，与 NestJS 模块系统无缝配合）
+- 数据库迁移：TypeORM Migration，版本化管理 schema 变更
+- 现有 `server/main.ts` 为独立脚本，需重构为标准 NestJS 应用入口（`bootstrap()` + `AppModule`），原 LangChain 调用逻辑迁移至 `AgentModule`
+
 ---
 
 ## 一、整体架构
