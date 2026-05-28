@@ -4,9 +4,13 @@ import { Conversation } from './entities/conversation.entity';
 import { Message } from './entities/message.entity';
 import { ConversationsService } from './conversations.service';
 import { ConversationsController } from './conversations.controller';
+import { AgentModule } from '../agent/agent.module';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Conversation, Message])],
+  imports: [
+    TypeOrmModule.forFeature([Conversation, Message]),
+    AgentModule,
+  ],
   providers: [ConversationsService],
   controllers: [ConversationsController],
   exports: [ConversationsService],
