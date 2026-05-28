@@ -14,14 +14,14 @@ export class UsersService {
   async create(email: string, password: string): Promise<User> {
     const hashedPassword = await bcrypt.hash(password, 10);
     const user = this.usersRepository.create({
-      email,
+      email: email.toLowerCase().trim(),
       password: hashedPassword,
     });
     return this.usersRepository.save(user);
   }
 
   async findByEmail(email: string): Promise<User | null> {
-    return this.usersRepository.findOne({ where: { email } });
+    return this.usersRepository.findOne({ where: { email: email.toLowerCase().trim() } });
   }
 
   async findById(id: string): Promise<User | null> {
