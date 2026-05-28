@@ -151,8 +151,7 @@ export class TemplatesService {
   renderTemplate(content: string, variables: Record<string, string>): string {
     let rendered = content;
     for (const [key, value] of Object.entries(variables)) {
-      const regex = new RegExp(`\\{\\{${key}\\}\\}`, 'g');
-      rendered = rendered.replace(regex, value);
+      rendered = rendered.split(`{{${key}}}`).join(value);
     }
     return rendered;
   }

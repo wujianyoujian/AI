@@ -1,4 +1,4 @@
-import { IsString, IsEnum, IsOptional } from 'class-validator';
+import { IsString, IsEnum, IsOptional, IsNotEmpty } from 'class-validator';
 import { TemplateVisibility } from '../entities/template.entity';
 
 export class UpdateTemplateDto {
@@ -7,6 +7,7 @@ export class UpdateTemplateDto {
   name?: string;
 
   @IsString()
+  @IsNotEmpty()
   @IsOptional()
   description?: string;
 
