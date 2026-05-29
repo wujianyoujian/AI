@@ -1,24 +1,20 @@
 import { useEffect, useState } from 'react';
+import {
+  Button, Card, Form, Input, Select, Space, Tag, Typography,
+  Modal, Row, Col, Empty, Popconfirm, message,
+} from 'antd';
+import { PlusOutlined, DeleteOutlined, MinusCircleOutlined } from '@ant-design/icons';
 import type { Template } from '../types';
 import { TemplateVisibility } from '../types';
 import * as templatesAPI from '../api/templates';
 
+const { Title, Text, Paragraph } = Typography;
+const { TextArea } = Input;
+
 export function TemplatesPage() {
   const [templates, setTemplates] = useState<Template[]>([]);
   const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState<{
-    name: string;
-    description: string;
-    visibility: TemplateVisibility;
-    content: string;
-    variables: Array<{ name: string; default: string }>;
-  }>({
-    name: '',
-    description: '',
-    visibility: TemplateVisibility.PRIVATE,
-    content: '',
-    variables: [],
-  });
+  const [form] = Form.useForm();
 
   useEffect(() => {
     loadTemplates();
@@ -33,148 +29,148 @@ export function TemplatesPage() {
     }
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleCreate = async (values: {
+    name: string;
+    description: string;
+    visibility: TemplateVisibility;
+    content: string;
+    variables?: Array<{ name: string; default: string }>;
+  }) => {
     try {
-      await templatesAPI.createTemplate(formData);
+      await templatesAPI.createTemplate({ ...values, variables: values.variables ?? [] });
+      message.success('模板创建成功');
       setShowForm(false);
-      setFormData({ name: '', description: '', visibility: TemplateVisibility.PRIVATE, content: '', variables: [] });
+      form.resetFields();
       loadTemplates();
     } catch (err) {
-      console.error('Failed to create template:', err);
+      message.error('创建失败');
+      console.error(err);
     }
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('确定删除此模板？')) return;
     try {
       await templatesAPI.deleteTemplate(id);
+      message.success('已删除');
       loadTemplates();
     } catch (err) {
-      console.error('Failed to delete template:', err);
+      message.error('删除失败');
+      console.error(err);
     }
   };
 
-  const addVariable = () => {
-    setFormData({ ...formData, variables: [...formData.variables, { name: '', default: '' }] });
-  };
-
-  const updateVariable = (index: number, field: 'name' | 'default', value: string) => {
-    const newVariables = [...formData.variables];
-    newVariables[index] = { ...newVariables[index], [field]: value };
-    setFormData({ ...formData, variables: newVariables });
-  };
-
-  const removeVariable = (index: number) => {
-    setFormData({ ...formData, variables: formData.variables.filter((_, i) => i !== index) });
-  };
-
   return (
-    <div style={{ padding: '20px' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-        <h1>模板管理</h1>
-        <button onClick={() => setShowForm(!showForm)} style={{ padding: '10px 20px' }}>
-          {showForm ? '取消' : '创建模板'}
-        </button>
+    <div style={{ padding: '32px 40px' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+        <Title level={4} style={{ margin: 0 }}>模板管理</Title>
+        <Button type="primary" icon={<PlusOutlined />} onClick={() => setShowForm(true)}>
+          创建模板
+        </Button>
       </div>
 
-      {showForm && (
-        <form onSubmit={handleCreate} style={{ marginBottom: '30px', padding: '20px', border: '1px solid #ccc' }}>
-          <div style={{ marginBottom: '15px' }}>
-            <label htmlFor="template-name">名称:</label>
-            <input
-              id="template-name"
-              type="text"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              required
-              style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-            />
-          </div>
-          <div style={{ marginBottom: '15px' }}>
-            <label htmlFor="template-desc">描述:</label>
-            <textarea
-              id="template-desc"
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              required
-              style={{ width: '100%', padding: '8px', marginTop: '5px', minHeight: '60px' }}
-            />
-          </div>
-          <div style={{ marginBottom: '15px' }}>
-            <label htmlFor="template-visibility">可见性:</label>
-            <select
-              id="template-visibility"
-              value={formData.visibility}
-              onChange={(e) => setFormData({ ...formData, visibility: e.target.value as TemplateVisibility })}
-              style={{ width: '100%', padding: '8px', marginTop: '5px' }}
-            >
-              <option value={TemplateVisibility.PRIVATE}>私有</option>
-              <option value={TemplateVisibility.PUBLIC}>公开</option>
-            </select>
-          </div>
-          <div style={{ marginBottom: '15px' }}>
-            <label htmlFor="template-content">内容 (使用 {'{{变量名}}'} 作为占位符):</label>
-            <textarea
-              id="template-content"
-              value={formData.content}
-              onChange={(e) => setFormData({ ...formData, content: e.target.value })}
-              required
-              style={{ width: '100%', padding: '8px', marginTop: '5px', minHeight: '100px' }}
-            />
-          </div>
-          <div style={{ marginBottom: '15px' }}>
-            <span>变量:</span>
-            <button type="button" onClick={addVariable} style={{ marginLeft: '10px', padding: '5px 10px' }}>
-              添加变量
-            </button>
-            {formData.variables.map((v, i) => (
-              <div key={i} style={{ display: 'flex', gap: '10px', marginTop: '10px' }}>
-                <input
-                  type="text"
-                  placeholder="变量名"
-                  value={v.name}
-                  onChange={(e) => updateVariable(i, 'name', e.target.value)}
-                  aria-label={`变量 ${i + 1} 名称`}
-                  style={{ flex: 1, padding: '8px' }}
-                />
-                <input
-                  type="text"
-                  placeholder="默认值"
-                  value={v.default}
-                  onChange={(e) => updateVariable(i, 'default', e.target.value)}
-                  aria-label={`变量 ${i + 1} 默认值`}
-                  style={{ flex: 1, padding: '8px' }}
-                />
-                <button type="button" onClick={() => removeVariable(i)} style={{ padding: '8px' }}>
-                  删除
-                </button>
-              </div>
-            ))}
-          </div>
-          <button type="submit" style={{ padding: '10px 20px' }}>
-            创建
-          </button>
-        </form>
+      {templates.length === 0 ? (
+        <Empty description="暂无模板，点击右上角创建" />
+      ) : (
+        <Row gutter={[16, 16]}>
+          {templates.map((template) => (
+            <Col key={template.id} xs={24} sm={12} lg={8}>
+              <Card
+                hoverable
+                actions={[
+                  <Popconfirm
+                    key="delete"
+                    title="确定删除此模板？"
+                    onConfirm={() => handleDelete(template.id)}
+                    okText="删除"
+                    cancelText="取消"
+                    okButtonProps={{ danger: true }}
+                  >
+                    <Button type="text" danger icon={<DeleteOutlined />}>删除</Button>
+                  </Popconfirm>,
+                ]}
+              >
+                <div style={{ marginBottom: 8 }}>
+                  <Text strong style={{ fontSize: 15 }}>{template.name}</Text>
+                  <Tag
+                    color={template.visibility === TemplateVisibility.PUBLIC ? 'blue' : 'default'}
+                    style={{ marginLeft: 8 }}
+                  >
+                    {template.visibility === TemplateVisibility.PUBLIC ? '公开' : '私有'}
+                  </Tag>
+                </div>
+                <Paragraph type="secondary" ellipsis={{ rows: 2 }} style={{ marginBottom: 8 }}>
+                  {template.description}
+                </Paragraph>
+                <Text type="secondary" style={{ fontSize: 12 }}>
+                  版本 {template.latestVersion?.version ?? 0}
+                </Text>
+              </Card>
+            </Col>
+          ))}
+        </Row>
       )}
 
-      <div>
-        {templates.map((template) => (
-          <div key={template.id} style={{ padding: '15px', marginBottom: '15px', border: '1px solid #ccc' }}>
-            <h3>{template.name}</h3>
-            <p>{template.description}</p>
-            <p>
-              <small>
-                可见性: {template.visibility === TemplateVisibility.PUBLIC ? '公开' : '私有'} | 版本:{' '}
-                {template.latestVersion?.version ?? 0}
-              </small>
-            </p>
-            <button onClick={() => handleDelete(template.id)} style={{ padding: '5px 10px' }}>
-              删除
-            </button>
-          </div>
-        ))}
-      </div>
+      <Modal
+        title="创建模板"
+        open={showForm}
+        onCancel={() => { setShowForm(false); form.resetFields(); }}
+        footer={null}
+        width={600}
+      >
+        <Form form={form} layout="vertical" onFinish={handleCreate} style={{ marginTop: 16 }}>
+          <Form.Item label="名称" name="name" rules={[{ required: true, message: '请输入模板名称' }]}>
+            <Input placeholder="模板名称" />
+          </Form.Item>
+          <Form.Item label="描述" name="description" rules={[{ required: true, message: '请输入描述' }]}>
+            <TextArea rows={2} placeholder="模板描述" />
+          </Form.Item>
+          <Form.Item label="可见性" name="visibility" initialValue={TemplateVisibility.PRIVATE}>
+            <Select>
+              <Select.Option value={TemplateVisibility.PRIVATE}>私有</Select.Option>
+              <Select.Option value={TemplateVisibility.PUBLIC}>公开</Select.Option>
+            </Select>
+          </Form.Item>
+          <Form.Item
+            label="内容（使用 {{变量名}} 作为占位符）"
+            name="content"
+            rules={[{ required: true, message: '请输入模板内容' }]}
+          >
+            <TextArea rows={4} placeholder="例如：请帮我写一篇关于 {{topic}} 的文章" />
+          </Form.Item>
+
+          <Form.List name="variables">
+            {(fields, { add, remove }) => (
+              <>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
+                  <Text>变量</Text>
+                  <Button type="dashed" size="small" icon={<PlusOutlined />} onClick={() => add({ name: '', default: '' })}>
+                    添加变量
+                  </Button>
+                </div>
+                {fields.map(({ key, name }) => (
+                  <Space key={key} style={{ display: 'flex', marginBottom: 8 }} align="baseline">
+                    <Form.Item name={[name, 'name']} rules={[{ required: true, message: '变量名' }]} style={{ marginBottom: 0 }}>
+                      <Input placeholder="变量名" style={{ width: 160 }} />
+                    </Form.Item>
+                    <Form.Item name={[name, 'default']} style={{ marginBottom: 0 }}>
+                      <Input placeholder="默认值（可选）" style={{ width: 160 }} />
+                    </Form.Item>
+                    <MinusCircleOutlined onClick={() => remove(name)} style={{ color: '#ff4d4f' }} />
+                  </Space>
+                ))}
+              </>
+            )}
+          </Form.List>
+
+          <Form.Item style={{ marginTop: 16, marginBottom: 0, textAlign: 'right' }}>
+            <Space>
+              <Button onClick={() => { setShowForm(false); form.resetFields(); }}>取消</Button>
+              <Button type="primary" htmlType="submit">创建</Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
     </div>
   );
 }
+

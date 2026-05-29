@@ -6,7 +6,7 @@ import { StreamMessageDto } from './dto/stream-message.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
-import { AgentService } from '../agent/agent.service';
+import { AgentService, HistoryMessage, BufferResult } from '../agent/agent.service';
 import { TemplatesService } from '../templates/templates.service';
 import { MessageRole } from './entities/message.entity';
 
@@ -54,7 +54,29 @@ export class ConversationsController {
     return new Observable<MessageEvent>((subscriber) => {
       (async () => {
         try {
-          await this.conversationsService.findOne(id, user.id);
+          const conversation = await this.conversationsService.findOne(id, user.id);
+
+          // Build history from existing messages
+          const existingMessages = await this.conversationsService.getMessages(id, user.id);
+          if (existingMessages.length === 0) {
+            const title = streamMessageDto.content.slice(0, 30).replace(/\n/g, ' ');
+            await this.conversationsService.updateTitle(id, title);
+          }
+
+          const history: HistoryMessage[] = existingMessages.map((m) => ({
+            role: m.role === MessageRole.USER ? 'user' : 'assistant',
+            content: m.content,
+          }));
+
+          // Manage buffer: summarize overflow, keep recent messages
+          const buffer = await this.agentService.prepareBuffer(
+            history,
+            conversation.summary,
+          );
+
+          if (buffer.summaryUpdated && buffer.summary) {
+            await this.conversationsService.updateSummary(id, buffer.summary);
+          }
 
           await this.conversationsService.saveMessage(
             id,
@@ -62,16 +84,22 @@ export class ConversationsController {
             streamMessageDto.content,
           );
 
+          // Build system prompt: summary (if any) + template prompt (if any)
           let systemPrompt: string | undefined;
 
           if (streamMessageDto.templateId) {
             const latestVersion = await this.templatesService.getLatestVersion(
               streamMessageDto.templateId,
             );
-            systemPrompt = this.templatesService.renderTemplate(
+            const templatePrompt = this.templatesService.renderTemplate(
               latestVersion.content,
               streamMessageDto.variables || {},
             );
+            systemPrompt = buffer.summary
+              ? `[对话历史摘要]\n${buffer.summary}\n\n${templatePrompt}`
+              : templatePrompt;
+          } else if (buffer.summary) {
+            systemPrompt = `[对话历史摘要]\n${buffer.summary}`;
           }
 
           let fullResponse = '';
@@ -80,6 +108,7 @@ export class ConversationsController {
             id,
             streamMessageDto.content,
             systemPrompt,
+            buffer.recentHistory,
           )) {
             fullResponse += token;
             subscriber.next({ data: JSON.stringify({ token }) });

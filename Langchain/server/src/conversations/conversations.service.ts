@@ -38,7 +38,7 @@ export class ConversationsService {
 
   async delete(id: string, userId: string): Promise<void> {
     const conversation = await this.findOne(id, userId);
-    await this.conversationsRepository.remove(conversation);
+    await this.conversationsRepository.softRemove(conversation);
   }
 
   async getMessages(conversationId: string, userId: string): Promise<Message[]> {
@@ -47,6 +47,18 @@ export class ConversationsService {
       where: { conversationId },
       order: { createdAt: 'ASC' },
     });
+  }
+
+  async updateTitle(id: string, title: string): Promise<void> {
+    await this.conversationsRepository.update(id, { title });
+  }
+
+  async updateSummary(id: string, summary: string): Promise<void> {
+    await this.conversationsRepository.update(id, { summary });
+  }
+
+  async countMessages(conversationId: string): Promise<number> {
+    return this.messagesRepository.count({ where: { conversationId } });
   }
 
   async saveMessage(conversationId: string, role: MessageRole, content: string): Promise<Message> {

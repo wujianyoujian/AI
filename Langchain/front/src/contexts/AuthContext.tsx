@@ -17,7 +17,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setLoading(false);
+    authAPI.getMe()
+      .then((result) => setUser(result.user))
+      .catch(() => setUser(null))
+      .finally(() => setLoading(false));
   }, []);
 
   const login = async (email: string, password: string) => {

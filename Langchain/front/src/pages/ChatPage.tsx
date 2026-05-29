@@ -1,20 +1,26 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import type { Message } from '../types';
+import { MessageRole } from '../types';
 import { MessageList } from '../components/MessageList';
 import { MessageInput } from '../components/MessageInput';
+import { useConversations } from '../contexts/ConversationsContext';
 import * as conversationsAPI from '../api/conversations';
 
 export function ChatPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { loadConversations } = useConversations();
   const [messages, setMessages] = useState<Message[]>([]);
   const [streamingMessage, setStreamingMessage] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isWaiting, setIsWaiting] = useState(false);
 
   useEffect(() => {
     if (id) {
       conversationsAPI.getMessages(id).then(setMessages).catch(console.error);
+    } else {
+      setMessages([]);
     }
   }, [id]);
 
@@ -31,6 +37,16 @@ export function ChatPage() {
       navigate(`/chat/${conversationId}`);
     }
 
+    // 立即展示用户消息
+    const optimisticUserMsg: Message = {
+      id: `optimistic-${Date.now()}`,
+      conversationId: conversationId,
+      role: MessageRole.USER,
+      content,
+      createdAt: new Date().toISOString(),
+    };
+    setMessages((prev) => [...prev, optimisticUserMsg]);
+    setIsWaiting(true);
     setIsStreaming(true);
     setStreamingMessage('');
 
@@ -62,11 +78,14 @@ export function ChatPage() {
               setMessages(updated);
               setStreamingMessage('');
               setIsStreaming(false);
+              setIsWaiting(false);
+              await loadConversations();
               return;
             }
             try {
               const parsed = JSON.parse(data);
               if (parsed.token) {
+                setIsWaiting(false);
                 setStreamingMessage((prev) => prev + parsed.token);
               }
             } catch {
@@ -77,8 +96,11 @@ export function ChatPage() {
       }
     } catch (err) {
       console.error('Stream failed:', err);
+      // 出错时移除乐观消息
+      setMessages((prev) => prev.filter((m) => m.id !== optimisticUserMsg.id));
     } finally {
       setIsStreaming(false);
+      setIsWaiting(false);
       setStreamingMessage('');
     }
   };
@@ -86,9 +108,14 @@ export function ChatPage() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
       <div style={{ flex: 1, overflow: 'auto' }}>
-        <MessageList messages={messages} streamingMessage={streamingMessage} />
+        <MessageList
+          messages={messages}
+          streamingMessage={streamingMessage}
+          isWaiting={isWaiting}
+        />
       </div>
       <MessageInput onSend={handleSend} disabled={isStreaming} />
     </div>
   );
 }
+

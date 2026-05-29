@@ -1,5 +1,6 @@
-import { Controller, Post, Body, Res, HttpCode, HttpStatus } from '@nestjs/common';
-import { Response } from 'express';
+import { Controller, Post, Get, Body, Res, Req, HttpCode, HttpStatus, UseGuards } from '@nestjs/common';
+import { Response, Request } from 'express';
+import { AuthGuard } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
@@ -42,5 +43,11 @@ export class AuthController {
   logout(@Res({ passthrough: true }) res: Response) {
     res.clearCookie('token');
     return { message: 'Logged out successfully' };
+  }
+
+  @Get('me')
+  @UseGuards(AuthGuard('jwt'))
+  me(@Req() req: Request) {
+    return { user: req.user };
   }
 }
