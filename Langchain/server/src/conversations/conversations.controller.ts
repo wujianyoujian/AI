@@ -1,12 +1,13 @@
 import { Controller, Get, Post, Delete, Param, Body, UseGuards, Sse, HttpCode } from '@nestjs/common';
 import { Observable } from 'rxjs';
+import { performance } from 'perf_hooks';
 import { ConversationsService } from './conversations.service';
 import { CreateConversationDto } from './dto/create-conversation.dto';
 import { StreamMessageDto } from './dto/stream-message.dto';
 import { JwtAuthGuard } from '../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../common/decorators/current-user.decorator';
 import { AuthenticatedUser } from '../common/types/authenticated-user';
-import { AgentService, HistoryMessage, BufferResult } from '../agent/agent.service';
+import { AgentService, HistoryMessage } from '../agent/agent.service';
 import { TemplatesService } from '../templates/templates.service';
 import { MessageRole } from './entities/message.entity';
 
@@ -53,14 +54,24 @@ export class ConversationsController {
   ): Observable<MessageEvent> {
     return new Observable<MessageEvent>((subscriber) => {
       (async () => {
-        try {
-          const conversation = await this.conversationsService.findOne(id, user.id);
+        const t = (label: string, start: number) =>
+          console.log(`[stream:${id}] ${label}: ${(performance.now() - start).toFixed(1)}ms`);
 
-          // Build history from existing messages
+        try {
+          let s = performance.now();
+
+          const conversation = await this.conversationsService.findOne(id, user.id);
+          t('findOne', s);
+
+          s = performance.now();
           const existingMessages = await this.conversationsService.getMessages(id, user.id);
+          t('getMessages', s);
+
           if (existingMessages.length === 0) {
+            s = performance.now();
             const title = streamMessageDto.content.slice(0, 30).replace(/\n/g, ' ');
             await this.conversationsService.updateTitle(id, title);
+            t('updateTitle', s);
           }
 
           const history: HistoryMessage[] = existingMessages.map((m) => ({
@@ -68,60 +79,67 @@ export class ConversationsController {
             content: m.content,
           }));
 
-          // Manage buffer: summarize overflow, keep recent messages
-          const buffer = await this.agentService.prepareBuffer(
-            history,
-            conversation.summary,
-          );
+          const { recentHistory, needsSummarize } = this.agentService.trimBuffer(history);
 
-          if (buffer.summaryUpdated && buffer.summary) {
-            await this.conversationsService.updateSummary(id, buffer.summary);
-          }
-
-          await this.conversationsService.saveMessage(
-            id,
-            MessageRole.USER,
-            streamMessageDto.content,
-          );
-
-          // Build system prompt: summary (if any) + template prompt (if any)
           let systemPrompt: string | undefined;
-
           if (streamMessageDto.templateId) {
+            s = performance.now();
             const latestVersion = await this.templatesService.getLatestVersion(
               streamMessageDto.templateId,
             );
+            t('getLatestVersion', s);
             const templatePrompt = this.templatesService.renderTemplate(
               latestVersion.content,
               streamMessageDto.variables || {},
             );
-            systemPrompt = buffer.summary
-              ? `[对话历史摘要]\n${buffer.summary}\n\n${templatePrompt}`
+            systemPrompt = conversation.summary
+              ? `[对话历史摘要]\n${conversation.summary}\n\n${templatePrompt}`
               : templatePrompt;
-          } else if (buffer.summary) {
-            systemPrompt = `[对话历史摘要]\n${buffer.summary}`;
+          } else if (conversation.summary) {
+            systemPrompt = `[对话历史摘要]\n${conversation.summary}`;
           }
 
+          s = performance.now();
+          await this.conversationsService.saveMessage(id, MessageRole.USER, streamMessageDto.content);
+          t('saveUserMessage', s);
+
           let fullResponse = '';
+          s = performance.now();
+          let firstToken = true;
 
           for await (const token of this.agentService.streamResponse(
             id,
             streamMessageDto.content,
             systemPrompt,
-            buffer.recentHistory,
+            recentHistory,
           )) {
+            if (firstToken) {
+              t('firstToken', s);
+              firstToken = false;
+            }
             fullResponse += token;
             subscriber.next({ data: JSON.stringify({ token }) });
           }
+          t('streamComplete', s);
 
-          await this.conversationsService.saveMessage(
-            id,
-            MessageRole.ASSISTANT,
-            fullResponse,
-          );
+          s = performance.now();
+          await this.conversationsService.saveMessage(id, MessageRole.ASSISTANT, fullResponse);
+          t('saveAssistantMessage', s);
 
           subscriber.next({ data: '[DONE]' });
           subscriber.complete();
+
+          if (needsSummarize) {
+            this.agentService
+              .prepareBuffer(history, conversation.summary)
+              .then(async (buffer) => {
+                if (buffer.summaryUpdated && buffer.summary) {
+                  await this.conversationsService.updateSummary(id, buffer.summary);
+                  console.log(`[stream:${id}] post-stream summarize: done`);
+                }
+              })
+              .catch((err) => console.error(`[stream:${id}] post-stream summarize failed:`, err));
+          }
         } catch (error) {
           subscriber.error(error);
         }

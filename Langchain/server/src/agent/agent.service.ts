@@ -39,6 +39,20 @@ export class AgentService {
   }
 
   /**
+   * Walk history from the end and return the index at which recent messages
+   * start fitting within MAX_BUFFER_TOKENS. Returns 0 when everything fits.
+   */
+  private computeCutoffIndex(history: HistoryMessage[]): number {
+    let kept = 0;
+    for (let i = history.length - 1; i >= 0; i--) {
+      const tokens = estimateTokens(history[i].content);
+      if (kept + tokens > MAX_BUFFER_TOKENS) return i + 1;
+      kept += tokens;
+    }
+    return 0;
+  }
+
+  /**
    * Manage the conversation buffer: keep recent messages within token limit,
    * summarize older messages that fall out of the window.
    */
@@ -52,18 +66,7 @@ export class AgentService {
       return { summary: existingSummary, recentHistory: history, summaryUpdated: false };
     }
 
-    // Walk from the end to find which messages fit in the window
-    let kept = 0;
-    let cutoffIndex = history.length;
-    for (let i = history.length - 1; i >= 0; i--) {
-      const tokens = estimateTokens(history[i].content);
-      if (kept + tokens > MAX_BUFFER_TOKENS) {
-        cutoffIndex = i + 1;
-        break;
-      }
-      kept += tokens;
-    }
-
+    const cutoffIndex = this.computeCutoffIndex(history);
     const oldMessages = history.slice(0, cutoffIndex);
     const recentHistory = history.slice(cutoffIndex);
 
@@ -73,6 +76,32 @@ export class AgentService {
     );
 
     return { summary: newSummary, recentHistory, summaryUpdated: true };
+  }
+
+  /**
+   * Synchronously trim the conversation buffer to fit within the token limit.
+   * Does not call LLM — safe to use on the hot path before streaming.
+   * Returns needsSummarize=true when messages were dropped, signaling that
+   * a background summarization should be scheduled.
+   */
+  trimBuffer(
+    history: HistoryMessage[],
+  ): { recentHistory: HistoryMessage[]; needsSummarize: boolean } {
+    const totalTokens = history.reduce((sum, m) => sum + estimateTokens(m.content), 0);
+
+    if (totalTokens <= MAX_BUFFER_TOKENS) {
+      return { recentHistory: history, needsSummarize: false };
+    }
+
+    const cutoffIndex = this.computeCutoffIndex(history);
+    const recentHistory = history.slice(cutoffIndex);
+
+    // Fallback: if a single message exceeds the limit, keep at least the last one
+    if (recentHistory.length === 0 && history.length > 0) {
+      return { recentHistory: history.slice(-1), needsSummarize: true };
+    }
+
+    return { recentHistory, needsSummarize: true };
   }
 
   async *streamResponse(
