@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import oneLight from 'react-syntax-highlighter/dist/esm/styles/prism/one-light';
-import type { Message } from '../types';
+import type { Message, MessageTiming } from '../types';
 import { MessageRole } from '../types';
 
 const { Text } = Typography;
@@ -14,9 +14,10 @@ interface MessageListProps {
   messages: Message[];
   streamingMessage?: string;
   isWaiting?: boolean;
+  lastTiming?: MessageTiming | null;
 }
 
-export function MessageList({ messages, streamingMessage, isWaiting }: MessageListProps) {
+export function MessageList({ messages, streamingMessage, isWaiting, lastTiming }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -112,6 +113,14 @@ export function MessageList({ messages, streamingMessage, isWaiting }: MessageLi
       {messages.map((msg) => renderRow(msg.content, msg.role, msg.id))}
 
       {streamingMessage && renderRow(streamingMessage, MessageRole.ASSISTANT, 'streaming', true)}
+
+      {!streamingMessage && lastTiming && messages.length > 0 && messages[messages.length - 1].role === MessageRole.ASSISTANT && (
+        <div style={{ display: 'flex', justifyContent: 'flex-start', paddingLeft: 52, marginTop: -14, marginBottom: 20 }}>
+          <span style={{ fontSize: 11, color: '#bfbfbf' }}>
+            首字 {lastTiming.ttft}s · 总计 {lastTiming.total}s
+          </span>
+        </div>
+      )}
 
       {isWaiting && (
         <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>

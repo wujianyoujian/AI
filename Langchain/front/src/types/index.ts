@@ -58,3 +58,8 @@ export interface Template {
   updatedAt: string;
   latestVersion?: TemplateVersion;
 }
+
+export interface MessageTiming {
+  ttft: number;   // 首字耗时，单位秒，保留1位小数
+  total: number;  // 总耗时，单位秒，保留1位小数
+}

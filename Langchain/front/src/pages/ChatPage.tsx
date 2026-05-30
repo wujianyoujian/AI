@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import type { Message } from '../types';
+import type { Message, MessageTiming } from '../types';
 import { MessageRole } from '../types';
 import { MessageList } from '../components/MessageList';
 import { MessageInput } from '../components/MessageInput';
@@ -15,6 +15,7 @@ export function ChatPage() {
   const [streamingMessage, setStreamingMessage] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
+  const [lastTiming, setLastTiming] = useState<MessageTiming | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -46,6 +47,8 @@ export function ChatPage() {
       createdAt: new Date().toISOString(),
     };
     setMessages((prev) => [...prev, optimisticUserMsg]);
+    const t1 = performance.now();
+    let t2: number | null = null;
     setIsWaiting(true);
     setIsStreaming(true);
     setStreamingMessage('');
@@ -76,6 +79,13 @@ export function ChatPage() {
             if (data === '[DONE]') {
               const updated = await conversationsAPI.getMessages(conversationId!);
               setMessages(updated);
+              const t3 = performance.now();
+              if (t2 !== null) {
+                setLastTiming({
+                  ttft: Math.round((t2 - t1) / 100) / 10,
+                  total: Math.round((t3 - t1) / 100) / 10,
+                });
+              }
               setStreamingMessage('');
               setIsStreaming(false);
               setIsWaiting(false);
@@ -85,6 +95,9 @@ export function ChatPage() {
             try {
               const parsed = JSON.parse(data);
               if (parsed.token) {
+                if (t2 === null) {
+                  t2 = performance.now();
+                }
                 setIsWaiting(false);
                 setStreamingMessage((prev) => prev + parsed.token);
               }
@@ -112,6 +125,7 @@ export function ChatPage() {
           messages={messages}
           streamingMessage={streamingMessage}
           isWaiting={isWaiting}
+          lastTiming={lastTiming}
         />
       </div>
       <MessageInput onSend={handleSend} disabled={isStreaming} />
