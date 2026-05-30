@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { MemorySaver } from '@langchain/langgraph';
 import { HumanMessage, AIMessageChunk, SystemMessage, AIMessage } from '@langchain/core/messages';
 import type { BaseMessage } from '@langchain/core/messages';
 import { ConversationGraph } from './graph/conversation-graph';
@@ -26,16 +25,14 @@ function estimateTokens(text: string): number {
 
 @Injectable()
 export class AgentService {
-  private checkpointer: MemorySaver;
   private conversationGraph: ConversationGraph;
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   private compiledGraph: any;
 
   constructor(private configService: ConfigService) {
-    this.checkpointer = new MemorySaver();
     const deepseekApiKey = this.configService.getOrThrow<string>('DEEPSEEK_API_KEY');
     this.conversationGraph = new ConversationGraph(deepseekApiKey);
-    this.compiledGraph = this.conversationGraph.compile(this.checkpointer);
+    this.compiledGraph = this.conversationGraph.compile();
   }
 
   /**
@@ -125,12 +122,7 @@ export class AgentService {
     messages.push(new HumanMessage(userMessage));
 
     const input = { messages, conversationId };
-    const config = {
-      configurable: { thread_id: conversationId },
-      streamMode: 'messages' as const,
-    };
-
-    const stream = await this.compiledGraph.stream(input, config);
+    const stream = await this.compiledGraph.stream(input, { streamMode: 'messages' as const });
 
     for await (const [chunk] of stream as AsyncIterable<[AIMessageChunk, Record<string, unknown>]>) {
       if (chunk instanceof AIMessageChunk && chunk.content) {
