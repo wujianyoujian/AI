@@ -1,4 +1,5 @@
 import { StateGraph, Annotation, messagesStateReducer, CompiledStateGraph } from '@langchain/langgraph';
+import type { LangGraphRunnableConfig } from '@langchain/langgraph';
 import { ChatDeepSeek } from '@langchain/deepseek';
 import { SystemMessage, AIMessageChunk, HumanMessage, BaseMessage } from '@langchain/core/messages';
 
@@ -50,10 +51,20 @@ export class ConversationGraph {
     return {};
   }
 
-  private async *callModel(state: ConversationStateType): AsyncGenerator<Partial<ConversationStateType>> {
+  private async callModel(
+    state: ConversationStateType,
+    config: LangGraphRunnableConfig,
+  ): Promise<Partial<ConversationStateType>> {
+    const writer = config?.writer;
+    const chunks: AIMessageChunk[] = [];
+
     for await (const chunk of await this.llm.stream(state.messages)) {
-      yield { messages: [chunk] };
+      chunks.push(chunk);
+      if (writer && chunk.content) writer(chunk);
     }
+
+    const merged = chunks.reduce((acc, c) => acc.concat(c));
+    return { messages: [merged] };
   }
 
   async summarizeConversation(

@@ -34,7 +34,6 @@ export class AgentService {
     this.conversationGraph = new ConversationGraph(deepseekApiKey);
     this.compiledGraph = this.conversationGraph.compile();
   }
-
   /**
    * Walk history from the end and return the index at which recent messages
    * start fitting within MAX_BUFFER_TOKENS. Returns 0 when everything fits.
@@ -122,9 +121,9 @@ export class AgentService {
     messages.push(new HumanMessage(userMessage));
 
     const input = { messages, conversationId };
-    const stream = await this.compiledGraph.stream(input, { streamMode: 'messages' as const });
+    const stream = await this.compiledGraph.stream(input, { streamMode: 'custom' as const });
 
-    for await (const [chunk] of stream as AsyncIterable<[AIMessageChunk, Record<string, unknown>]>) {
+    for await (const chunk of stream as AsyncIterable<AIMessageChunk>) {
       if (chunk instanceof AIMessageChunk && chunk.content) {
         const token = typeof chunk.content === 'string'
           ? chunk.content
