@@ -23,6 +23,7 @@ export function ChatPage() {
     } else {
       setMessages([]);
     }
+    setLastTiming(null);
   }, [id]);
 
   const handleSend = async (

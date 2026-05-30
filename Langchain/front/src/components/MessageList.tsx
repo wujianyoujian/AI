@@ -114,7 +114,7 @@ export function MessageList({ messages, streamingMessage, isWaiting, lastTiming 
 
       {streamingMessage && renderRow(streamingMessage, MessageRole.ASSISTANT, 'streaming', true)}
 
-      {!streamingMessage && lastTiming && messages.length > 0 && messages[messages.length - 1].role === MessageRole.ASSISTANT && (
+      {!streamingMessage && !isWaiting && lastTiming && messages.length > 0 && messages[messages.length - 1].role === MessageRole.ASSISTANT && (
         <div style={{ display: 'flex', justifyContent: 'flex-start', paddingLeft: 52, marginTop: -14, marginBottom: 20 }}>
           <span style={{ fontSize: 11, color: '#bfbfbf' }}>
             首字 {lastTiming.ttft}s · 总计 {lastTiming.total}s
