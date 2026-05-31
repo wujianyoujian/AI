@@ -1,0 +1,51 @@
+name: Deploy Langchain
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'Langchain/**'
+      - '.github/workflows/deploy-langchain.yml'
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and push server
+        uses: docker/build-push-action@v5
+        with:
+          context: ./Langchain/server
+          push: true
+          tags: ghcr.io/wujianyoujian/ai-server:latest
+
+      - name: Build and push front
+        uses: docker/build-push-action@v5
+        with:
+          context: ./Langchain/front
+          push: true
+          tags: ghcr.io/wujianyoujian/ai-front:latest
+
+      - name: Deploy to server
+        uses: appleboy/ssh-action@v1
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          script: |
+            cd /opt/langchain
+            docker compose pull
+            docker compose up -d
+            docker image prune -f

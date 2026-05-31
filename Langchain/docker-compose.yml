@@ -1,0 +1,28 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: langchain
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  server:
+    image: ghcr.io/wujianyoujian/ai-server:latest
+    restart: unless-stopped
+    env_file: .env
+    depends_on:
+      - db
+
+  front:
+    image: ghcr.io/wujianyoujian/ai-front:latest
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      - server
+
+volumes:
+  pgdata:

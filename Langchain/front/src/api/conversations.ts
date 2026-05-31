@@ -31,7 +31,7 @@ export async function streamMessage(
   signal?: AbortSignal,
   isRetry?: boolean,
 ): Promise<ReadableStream<Uint8Array>> {
-  const response = await fetch(`http://localhost:3000/conversations/${conversationId}/stream`, {
+  const response = await fetch(`/api/conversations/${conversationId}/stream`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
