@@ -31,11 +31,18 @@ export interface Conversation {
   updatedAt: string;
 }
 
+export interface MessageTiming {
+  ttft: number;
+  total: number;
+}
+
 export interface Message {
   id: string;
   conversationId: string;
   role: MessageRole;
   content: string;
+  reasoningContent?: string | null;
+  timing?: MessageTiming | null;
   createdAt: string;
 }
 
@@ -57,9 +64,4 @@ export interface Template {
   createdAt: string;
   updatedAt: string;
   latestVersion?: TemplateVersion;
-}
-
-export interface MessageTiming {
-  ttft: number;   // 首字耗时，单位秒，保留1位小数
-  total: number;  // 总耗时，单位秒，保留1位小数
 }

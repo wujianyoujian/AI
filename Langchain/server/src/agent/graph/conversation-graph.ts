@@ -1,5 +1,5 @@
 import { StateGraph, Annotation, messagesStateReducer, CompiledStateGraph } from '@langchain/langgraph';
-import type { LangGraphRunnableConfig } from '@langchain/langgraph';
+import { performance } from 'perf_hooks';
 import { ChatDeepSeek } from '@langchain/deepseek';
 import { SystemMessage, AIMessageChunk, HumanMessage, BaseMessage } from '@langchain/core/messages';
 
@@ -45,26 +45,22 @@ export class ConversationGraph {
   }
 
   private async prepareContext(state: ConversationStateType): Promise<Partial<ConversationStateType>> {
+    const s = performance.now();
+    let result: Partial<ConversationStateType>;
     if (state.systemPrompt) {
-      return { messages: [new SystemMessage(state.systemPrompt)] };
+      result = { messages: [new SystemMessage(state.systemPrompt)] };
+    } else {
+      result = {};
     }
-    return {};
+    console.log(`[graph] prepareContext: ${(performance.now() - s).toFixed(1)}ms`);
+    return result;
   }
 
   private async callModel(
     state: ConversationStateType,
-    config: LangGraphRunnableConfig,
   ): Promise<Partial<ConversationStateType>> {
-    const writer = config?.writer;
-    const chunks: AIMessageChunk[] = [];
-
-    for await (const chunk of await this.llm.stream(state.messages)) {
-      chunks.push(chunk);
-      if (writer && chunk.content) writer(chunk);
-    }
-
-    const merged = chunks.reduce((acc, c) => acc.concat(c));
-    return { messages: [merged] };
+    const response = await this.llm.invoke(state.messages);
+    return { messages: [response] };
   }
 
   async summarizeConversation(

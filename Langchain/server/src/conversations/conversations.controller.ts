@@ -104,26 +104,43 @@ export class ConversationsController {
           t('saveUserMessage', s);
 
           let fullResponse = '';
-          s = performance.now();
-          let firstToken = true;
+          let fullReasoning = '';
+          const streamStart = performance.now();
+          let firstChunk = true;
+          let ttft: number | null = null;
 
-          for await (const token of this.agentService.streamResponse(
+          for await (const chunk of this.agentService.streamResponse(
             id,
             streamMessageDto.content,
             systemPrompt,
             recentHistory,
           )) {
-            if (firstToken) {
-              t('firstToken', s);
-              firstToken = false;
+            if (firstChunk) {
+              ttft = (performance.now() - streamStart) / 1000;
+              t('firstChunk', s);
+              firstChunk = false;
             }
-            fullResponse += token;
-            subscriber.next({ data: JSON.stringify({ token }) });
+            // chunk is already JSON: { token } or { reasoning }
+            const parsed = JSON.parse(chunk) as { token?: string; reasoning?: string };
+            if (parsed.token) fullResponse += parsed.token;
+            if (parsed.reasoning) fullReasoning += parsed.reasoning;
+            subscriber.next({ data: chunk });
           }
           t('streamComplete', s);
 
+          const total = (performance.now() - streamStart) / 1000;
+          const timing = ttft !== null
+            ? { ttft: Math.round(ttft * 10) / 10, total: Math.round(total * 10) / 10 }
+            : null;
+
           s = performance.now();
-          await this.conversationsService.saveMessage(id, MessageRole.ASSISTANT, fullResponse);
+          await this.conversationsService.saveMessage(
+            id,
+            MessageRole.ASSISTANT,
+            fullResponse,
+            fullReasoning || null,
+            timing,
+          );
           t('saveAssistantMessage', s);
 
           subscriber.next({ data: '[DONE]' });

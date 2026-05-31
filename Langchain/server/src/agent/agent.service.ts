@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { performance } from 'perf_hooks';
 import { HumanMessage, AIMessageChunk, SystemMessage, AIMessage } from '@langchain/core/messages';
 import type { BaseMessage } from '@langchain/core/messages';
 import { ConversationGraph } from './graph/conversation-graph';
@@ -121,15 +122,36 @@ export class AgentService {
     messages.push(new HumanMessage(userMessage));
 
     const input = { messages, conversationId };
-    const stream = await this.compiledGraph.stream(input, { streamMode: 'custom' as const });
+    const s = performance.now();
+    let firstChunk = true;
 
-    for await (const chunk of stream as AsyncIterable<AIMessageChunk>) {
-      if (chunk instanceof AIMessageChunk && chunk.content) {
-        const token = typeof chunk.content === 'string'
-          ? chunk.content
-          : JSON.stringify(chunk.content);
-        if (token) yield token;
+    for await (const event of this.compiledGraph.streamEvents(input, { version: 'v2' })) {
+      if (event.event === 'on_chat_model_stream' && event.name === 'ChatDeepSeek') {
+        const chunk = event.data?.chunk as AIMessageChunk | undefined;
+        if (!chunk) continue;
+
+        const reasoning = (chunk.additional_kwargs as Record<string, unknown>)?.reasoning_content;
+        if (typeof reasoning === 'string' && reasoning) {
+          if (firstChunk) {
+            console.log(`[graph] streamEvents firstChunk (reasoning): ${(performance.now() - s).toFixed(1)}ms`);
+            firstChunk = false;
+          }
+          yield JSON.stringify({ reasoning });
+          continue;
+        }
+
+        if (chunk instanceof AIMessageChunk && chunk.content) {
+          if (firstChunk) {
+            console.log(`[graph] streamEvents firstChunk (token): ${(performance.now() - s).toFixed(1)}ms`);
+            firstChunk = false;
+          }
+          const token = typeof chunk.content === 'string'
+            ? chunk.content
+            : JSON.stringify(chunk.content);
+          if (token) yield JSON.stringify({ token });
+        }
       }
     }
+    console.log(`[graph] streamEvents complete: ${(performance.now() - s).toFixed(1)}ms`);
   }
 }

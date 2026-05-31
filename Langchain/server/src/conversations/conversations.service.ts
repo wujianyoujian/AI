@@ -61,8 +61,20 @@ export class ConversationsService {
     return this.messagesRepository.count({ where: { conversationId } });
   }
 
-  async saveMessage(conversationId: string, role: MessageRole, content: string): Promise<Message> {
-    const message = this.messagesRepository.create({ conversationId, role, content });
+  async saveMessage(
+    conversationId: string,
+    role: MessageRole,
+    content: string,
+    reasoningContent?: string | null,
+    timing?: { ttft: number; total: number } | null,
+  ): Promise<Message> {
+    const message = this.messagesRepository.create({
+      conversationId,
+      role,
+      content,
+      reasoningContent: reasoningContent ?? null,
+      timing: timing ?? null,
+    });
     return this.messagesRepository.save(message);
   }
 }

@@ -13,9 +13,10 @@ export function ChatPage() {
   const { loadConversations } = useConversations();
   const [messages, setMessages] = useState<Message[]>([]);
   const [streamingMessage, setStreamingMessage] = useState('');
+  const [streamingReasoning, setStreamingReasoning] = useState('');
   const [isStreaming, setIsStreaming] = useState(false);
   const [isWaiting, setIsWaiting] = useState(false);
-  const [lastTiming, setLastTiming] = useState<MessageTiming | null>(null);
+  const [currentTiming, setCurrentTiming] = useState<MessageTiming | null>(null);
 
   useEffect(() => {
     if (id) {
@@ -23,7 +24,7 @@ export function ChatPage() {
     } else {
       setMessages([]);
     }
-    setLastTiming(null);
+    setCurrentTiming(null);
   }, [id]);
 
   const handleSend = async (
@@ -39,7 +40,6 @@ export function ChatPage() {
       navigate(`/chat/${conversationId}`);
     }
 
-    // 立即展示用户消息
     const optimisticUserMsg: Message = {
       id: `optimistic-${Date.now()}`,
       conversationId: conversationId,
@@ -53,6 +53,8 @@ export function ChatPage() {
     setIsWaiting(true);
     setIsStreaming(true);
     setStreamingMessage('');
+    setStreamingReasoning('');
+    setCurrentTiming(null);
 
     try {
       const stream = await conversationsAPI.streamMessage(
@@ -82,23 +84,26 @@ export function ChatPage() {
               setMessages(updated);
               const t3 = performance.now();
               if (t2 !== null) {
-                setLastTiming({
+                setCurrentTiming({
                   ttft: Math.round((t2 - t1) / 100) / 10,
                   total: Math.round((t3 - t1) / 100) / 10,
                 });
               }
               setStreamingMessage('');
+              setStreamingReasoning('');
               setIsStreaming(false);
               setIsWaiting(false);
               await loadConversations();
               return;
             }
             try {
-              const parsed = JSON.parse(data);
-              if (parsed.token) {
-                if (t2 === null) {
-                  t2 = performance.now();
-                }
+              const parsed = JSON.parse(data) as { token?: string; reasoning?: string };
+              if (parsed.reasoning) {
+                if (t2 === null) t2 = performance.now();
+                setIsWaiting(false);
+                setStreamingReasoning((prev) => prev + parsed.reasoning);
+              } else if (parsed.token) {
+                if (t2 === null) t2 = performance.now();
                 setIsWaiting(false);
                 setStreamingMessage((prev) => prev + parsed.token);
               }
@@ -110,12 +115,12 @@ export function ChatPage() {
       }
     } catch (err) {
       console.error('Stream failed:', err);
-      // 出错时移除乐观消息
       setMessages((prev) => prev.filter((m) => m.id !== optimisticUserMsg.id));
     } finally {
       setIsStreaming(false);
       setIsWaiting(false);
       setStreamingMessage('');
+      setStreamingReasoning('');
     }
   };
 
@@ -125,8 +130,9 @@ export function ChatPage() {
         <MessageList
           messages={messages}
           streamingMessage={streamingMessage}
+          streamingReasoning={streamingReasoning}
           isWaiting={isWaiting}
-          lastTiming={lastTiming}
+          currentTiming={currentTiming}
         />
       </div>
       <MessageInput onSend={handleSend} disabled={isStreaming} />

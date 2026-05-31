@@ -24,6 +24,12 @@ export class Message {
   @Column('text')
   content: string;
 
+  @Column({ name: 'reasoning_content', type: 'text', nullable: true })
+  reasoningContent: string | null;
+
+  @Column({ type: 'jsonb', nullable: true })
+  timing: { ttft: number; total: number } | null;
+
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;
 }
