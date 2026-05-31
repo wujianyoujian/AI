@@ -28,12 +28,15 @@ export async function streamMessage(
   content: string,
   templateId?: string,
   variables?: Record<string, string>,
+  signal?: AbortSignal,
+  isRetry?: boolean,
 ): Promise<ReadableStream<Uint8Array>> {
   const response = await fetch(`http://localhost:3000/conversations/${conversationId}/stream`, {
     method: 'POST',
     credentials: 'include',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ content, templateId, variables }),
+    body: JSON.stringify({ content, templateId, variables, isRetry }),
+    signal,
   });
 
   if (!response.ok || !response.body) {

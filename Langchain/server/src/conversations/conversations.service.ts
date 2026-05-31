@@ -61,6 +61,16 @@ export class ConversationsService {
     return this.messagesRepository.count({ where: { conversationId } });
   }
 
+  async deleteLastAssistantMessage(conversationId: string): Promise<void> {
+    const last = await this.messagesRepository.findOne({
+      where: { conversationId, role: MessageRole.ASSISTANT },
+      order: { createdAt: 'DESC' },
+    });
+    if (last) {
+      await this.messagesRepository.remove(last);
+    }
+  }
+
   async saveMessage(
     conversationId: string,
     role: MessageRole,

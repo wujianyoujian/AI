@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
-import { Avatar, Typography, Spin } from 'antd';
-import { UserOutlined, RobotOutlined, LoadingOutlined } from '@ant-design/icons';
+import { Avatar, Typography, Spin, Button, Tooltip } from 'antd';
+import { UserOutlined, RobotOutlined, LoadingOutlined, ReloadOutlined } from '@ant-design/icons';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
@@ -16,6 +16,8 @@ interface MessageListProps {
   streamingReasoning?: string;
   isWaiting?: boolean;
   currentTiming?: MessageTiming | null;
+  interrupted?: boolean;
+  onRetry?: () => void;
 }
 
 function TimingBadge({ timing }: { timing: MessageTiming }) {
@@ -119,7 +121,7 @@ function renderBubble(content: string, isUser: boolean, isStreaming = false) {
   );
 }
 
-export function MessageList({ messages, streamingMessage, streamingReasoning, isWaiting, currentTiming }: MessageListProps) {
+export function MessageList({ messages, streamingMessage, streamingReasoning, isWaiting, currentTiming, interrupted, onRetry }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -127,9 +129,9 @@ export function MessageList({ messages, streamingMessage, streamingReasoning, is
   }, [messages, streamingMessage, streamingReasoning, isWaiting]);
 
   const lastMsg = messages.length > 0 ? messages[messages.length - 1] : null;
-  // show currentTiming only when the last message doesn't already have timing stored
   const showCurrentTiming = !streamingMessage && !isWaiting && currentTiming
     && !(lastMsg?.role === MessageRole.ASSISTANT && lastMsg.timing);
+  const showRetryAfterLast = interrupted && !streamingMessage && !streamingReasoning && !isWaiting;
 
   return (
     <div style={{ padding: '24px 40px', flex: 1 }}>
@@ -179,6 +181,22 @@ export function MessageList({ messages, streamingMessage, streamingReasoning, is
       {showCurrentTiming && (
         <div style={{ paddingLeft: 52, marginBottom: 20 }}>
           <TimingBadge timing={currentTiming!} />
+        </div>
+      )}
+
+      {showRetryAfterLast && (
+        <div style={{ paddingLeft: 52, marginBottom: 20, display: 'flex', alignItems: 'center', gap: 8 }}>
+          <Text type="secondary" style={{ fontSize: 12 }}>生成已中断</Text>
+          <Tooltip title="重新发送上一条消息，继续生成">
+            <Button
+              size="small"
+              icon={<ReloadOutlined />}
+              onClick={onRetry}
+              style={{ fontSize: 12 }}
+            >
+              重试
+            </Button>
+          </Tooltip>
         </div>
       )}
 

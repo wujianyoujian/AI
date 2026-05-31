@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, IsOptional, IsUUID, IsObject } from 'class-validator';
+import { IsString, IsNotEmpty, IsOptional, IsUUID, IsObject, IsBoolean } from 'class-validator';
 
 export class StreamMessageDto {
   @IsString()
@@ -12,4 +12,8 @@ export class StreamMessageDto {
   @IsOptional()
   @IsObject()
   variables?: Record<string, string>;
+
+  @IsOptional()
+  @IsBoolean()
+  isRetry?: boolean;
 }

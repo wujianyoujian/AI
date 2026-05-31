@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Delete, Param, Body, UseGuards, Sse, HttpCode } from '@nestjs/common';
+import { Controller, Get, Post, Delete, Param, Body, UseGuards, Sse, HttpCode, ConflictException } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { performance } from 'perf_hooks';
 import { ConversationsService } from './conversations.service';
@@ -18,6 +18,9 @@ interface MessageEvent {
 @Controller('conversations')
 @UseGuards(JwtAuthGuard)
 export class ConversationsController {
+  // 对话级别并发锁：同一个 conversationId 同时只允许一个流
+  private readonly activeStreams = new Set<string>();
+
   constructor(
     private conversationsService: ConversationsService,
     private agentService: AgentService,
@@ -52,7 +55,12 @@ export class ConversationsController {
     @Body() streamMessageDto: StreamMessageDto,
     @CurrentUser() user: AuthenticatedUser,
   ): Observable<MessageEvent> {
+    if (this.activeStreams.has(id)) {
+      throw new ConflictException('Stream already in progress for this conversation');
+    }
+
     return new Observable<MessageEvent>((subscriber) => {
+      this.activeStreams.add(id);
       (async () => {
         const t = (label: string, start: number) =>
           console.log(`[stream:${id}] ${label}: ${(performance.now() - start).toFixed(1)}ms`);
@@ -79,6 +87,13 @@ export class ConversationsController {
             content: m.content,
           }));
 
+          // isRetry=true 时 user 消息已存过，不重复保存
+          if (!streamMessageDto.isRetry) {
+            s = performance.now();
+            await this.conversationsService.saveMessage(id, MessageRole.USER, streamMessageDto.content);
+            t('saveUserMessage', s);
+          }
+
           const { recentHistory, needsSummarize } = this.agentService.trimBuffer(history);
 
           let systemPrompt: string | undefined;
@@ -99,10 +114,6 @@ export class ConversationsController {
             systemPrompt = `[对话历史摘要]\n${conversation.summary}`;
           }
 
-          s = performance.now();
-          await this.conversationsService.saveMessage(id, MessageRole.USER, streamMessageDto.content);
-          t('saveUserMessage', s);
-
           let fullResponse = '';
           let fullReasoning = '';
           const streamStart = performance.now();
@@ -115,12 +126,12 @@ export class ConversationsController {
             systemPrompt,
             recentHistory,
           )) {
+            if (subscriber.closed) break;
             if (firstChunk) {
               ttft = (performance.now() - streamStart) / 1000;
               t('firstChunk', s);
               firstChunk = false;
             }
-            // chunk is already JSON: { token } or { reasoning }
             const parsed = JSON.parse(chunk) as { token?: string; reasoning?: string };
             if (parsed.token) fullResponse += parsed.token;
             if (parsed.reasoning) fullReasoning += parsed.reasoning;
@@ -128,12 +139,21 @@ export class ConversationsController {
           }
           t('streamComplete', s);
 
+          if (subscriber.closed) {
+            console.log(`[stream:${id}] client disconnected, skipping save`);
+            this.activeStreams.delete(id);
+            return;
+          }
+
           const total = (performance.now() - streamStart) / 1000;
           const timing = ttft !== null
             ? { ttft: Math.round(ttft * 10) / 10, total: Math.round(total * 10) / 10 }
             : null;
 
           s = performance.now();
+          if (streamMessageDto.isRetry) {
+            await this.conversationsService.deleteLastAssistantMessage(id);
+          }
           await this.conversationsService.saveMessage(
             id,
             MessageRole.ASSISTANT,
@@ -145,6 +165,7 @@ export class ConversationsController {
 
           subscriber.next({ data: '[DONE]' });
           subscriber.complete();
+          this.activeStreams.delete(id);
 
           if (needsSummarize) {
             this.agentService
@@ -158,6 +179,7 @@ export class ConversationsController {
               .catch((err) => console.error(`[stream:${id}] post-stream summarize failed:`, err));
           }
         } catch (error) {
+          this.activeStreams.delete(id);
           subscriber.error(error);
         }
       })();
