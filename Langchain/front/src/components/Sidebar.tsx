@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Layout, Button, Menu, Typography, Popconfirm } from 'antd';
-import { PlusOutlined, MessageOutlined, AppstoreOutlined, DeleteOutlined } from '@ant-design/icons';
+import { PlusOutlined, MessageOutlined, 
+  // AppstoreOutlined,
+   DeleteOutlined } from '@ant-design/icons';
 import { useConversations } from '../contexts/ConversationsContext';
 import * as conversationsAPI from '../api/conversations';
 
@@ -31,11 +33,11 @@ export function Sidebar() {
   };
 
   const menuItems = [
-    {
-      key: 'templates',
-      icon: <AppstoreOutlined />,
-      label: <Link to="/templates">模板管理</Link>,
-    },
+    // {
+    //   key: 'templates',
+    //   icon: <AppstoreOutlined />,
+    //   label: <Link to="/templates">模板管理</Link>,
+    // },
     { type: 'divider' as const },
     ...conversations.map((conv) => ({
       key: conv.id,

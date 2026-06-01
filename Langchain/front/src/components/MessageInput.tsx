@@ -1,6 +1,8 @@
 import { useState } from 'react';
 import { Input, Button, Space } from 'antd';
-import { SendOutlined, AppstoreOutlined, StopOutlined } from '@ant-design/icons';
+import { SendOutlined, 
+  // AppstoreOutlined,
+   StopOutlined } from '@ant-design/icons';
 import { TemplateSelector } from './TemplateSelector';
 
 interface MessageInputProps {
@@ -49,13 +51,13 @@ export function MessageInput({ onSend, onAbort, isStreaming }: MessageInputProps
           size="large"
           style={{ borderRadius: '8px 0 0 8px' }}
         />
-        <Button
+        {/* <Button
           icon={<AppstoreOutlined />}
           size="large"
           disabled={isStreaming || !content.trim()}
           onClick={() => setShowTemplateSelector(true)}
           title="使用模板"
-        />
+        /> */}
         {isStreaming ? (
           <Button
             danger
