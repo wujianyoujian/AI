@@ -1,7 +1,10 @@
-import { StateGraph, Annotation, messagesStateReducer, CompiledStateGraph } from '@langchain/langgraph';
+import { StateGraph, Annotation, messagesStateReducer, CompiledStateGraph, START, END } from '@langchain/langgraph';
 import { performance } from 'perf_hooks';
 import { ChatDeepSeek } from '@langchain/deepseek';
 import { SystemMessage, AIMessageChunk, HumanMessage, BaseMessage } from '@langchain/core/messages';
+// import { JsonOutputParser } from '@langchain/core/output_parsers'
+// import { MessagesPlaceholder  } from '@langchain/core/prompts'
+
 
 const ConversationAnnotation = Annotation.Root({
   messages: Annotation<BaseMessage[]>({
@@ -37,9 +40,10 @@ export class ConversationGraph {
     const graph = new StateGraph(ConversationAnnotation)
       .addNode('prepare_context', this.prepareContext.bind(this))
       .addNode('call_model', this.callModel.bind(this))
-      .addEdge('__start__', 'prepare_context')
+
+      .addEdge(START, 'prepare_context')
       .addEdge('prepare_context', 'call_model')
-      .addEdge('call_model', '__end__');
+      .addEdge('call_model', END);
 
     return graph.compile() as CompiledStateGraph<any, any, any>;
   }
