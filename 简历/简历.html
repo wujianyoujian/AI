@@ -118,12 +118,11 @@
 
   /* ── Skills ── */
   .skill-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 6px 16px;
+    columns: 1;
   }
   .skill-group {
-    padding: 5px 0;
+    padding: 2px 0;
+    line-height: 1.5;
   }
   .skill-group .label {
     font-weight: 700;
@@ -133,7 +132,6 @@
   .skill-group .desc {
     color: var(--text-light);
     font-size: 12.5px;
-    line-height: 1.4;
   }
 
   /* ── Experience ── */
@@ -309,8 +307,13 @@
   </div>
 
   <div class="skill-group">
+    <span class="label">Vue 技术体系：</span>
+    <span class="desc">精通 <strong>Vue 3 Composition API</strong> 与响应式系统，熟练使用 <strong>Vue</strong> + <strong>Pinia</strong> + <strong>Vue Router</strong> 构建中大型前端应用，结合 <strong>Element Plus</strong> / <strong>Vant</strong> 完成复杂中后台及移动端 <strong>H5</strong> 应用开发，具备 Vue 生态的组件设计与工程化落地能力</span>
+  </div>
+
+  <div class="skill-group">
     <span class="label">AI 驱动开发：</span>
-    <span class="desc">基于 <strong>LangChain/LangGraph</strong> 实现多轮对话与流程编排，熟练 <strong>Prompt 工程</strong>、<strong>Function Calling</strong> 及 <strong>SSE</strong> 流式渲染；深度使用 <strong>AI Coding Agent</strong>，沉淀标准化 <strong>Skill/Workflow</strong> 提升研发效率</span>
+    <span class="desc">熟练运用 <strong>Prompt 工程</strong>、<strong>Function Calling</strong>、结构化输出等 AI 工程化手段，落地 <strong>SSE/Stream</strong> 流式渲染完整前端方案；基于 <strong>LangGraph</strong> 实现多轮对话上下文隔离与流程编排，基于 <strong>LangChain</strong> 完成多模型数据格式化与 Function Calling 链路；深度使用 <strong>Claude Code / AI Coding Agent</strong>，将高频开发场景沉淀为标准化 <strong>Skill/Workflow</strong>，系统性提升研发效率</span>
   </div>
 
   <div class="skill-group">
@@ -422,11 +425,21 @@
       支付宝终端设备一站式运营管理平台，覆盖海报投放 / 刷脸运营 / 设备消息 / 业务管理 / 研发配置等核心模块，支撑全国<strong>千万级</strong>线下支付设备（N5/N6/N7/蜻蜓机等）运营管理。
     </div>
     <div class="project-meta">
-      技术栈：React + Ant Design Pro + AntV X6 + LangChain / LangGraph + Node.js
+      技术栈：React + Vue 3 + Ant Design Pro + Element Plus + AntV X6 + LangChain / LangGraph + NestJS + qiankun
     </div>
 
     <div class="project-block">
-      <div class="sub-title">1. 低代码表单引擎</div>
+      <div class="sub-title">1. 微前端基座架构</div>
+      <div class="sub-desc">负责中后台微前端架构改造，基于 qiankun 实现 React 与 Vue 多技术栈子应用共存与渐进式迁移：</div>
+      <ul>
+        <li>制定子应用接入规范与沙箱配置策略，保障多技术栈并行运行时的样式隔离与全局变量不冲突</li>
+        <li>统一主子应用间的事件通信与共享依赖约定，解决跨技术栈组件复用与状态同步问题</li>
+        <li>推动存量 Vue 模块与新增 React 模块并行迭代，降低技术栈迁移风险</li>
+      </ul>
+    </div>
+
+    <div class="project-block">
+      <div class="sub-title">2. 低代码表单引擎</div>
       <div class="sub-desc">基于 Formily 设计 Schema 驱动的低代码表单体系，解决通用表单能力与业务定制化之间的扩展性矛盾：</div>
       <ul>
         <li>设计字段联动响应式依赖模型，支持复杂条件下显隐与校验的动态变更</li>
@@ -436,7 +449,7 @@
     </div>
 
     <div class="project-block">
-      <div class="sub-title">2. 可视化流程画布</div>
+      <div class="sub-title">3. 可视化流程画布</div>
       <div class="sub-desc">独立设计并主导基于 AntV X6 的可视化流程画布模块，支持多分支节点自由编排与条件连线配置：</div>
       <ul>
         <li>解决大规模节点下 React 组件嵌入 Canvas 的渲染性能问题，通过按需渲染与节点复用机制保障复杂画布的流畅交互</li>
@@ -445,7 +458,7 @@
     </div>
 
     <div class="project-block">
-      <div class="sub-title">3. AI Agent 接入</div>
+      <div class="sub-title">4. AI Agent 接入</div>
       <div class="sub-desc">主导 AI Agent 方案设计与落地，集成智能问答、自动化流程编排与链路分析三大能力：</div>
       <ul>
         <li>设计 SSE 流式响应的前端消费与渲染方案，涵盖断线重连、超时降级与异常容错</li>

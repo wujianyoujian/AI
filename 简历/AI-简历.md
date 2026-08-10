@@ -3,14 +3,14 @@
 * 学历：本科 / 数字媒体技术 / 湖北民族大学
 * 工作经验：5 年
 * 联系方式：18107152961 | pengwei1017@foxmail.com
-* GitHub: https://github.com/wujianyoujian/AI
-* AI Demo: http://106.14.158.179/
 
 ## 专业技能
 
 **前端基础：** 深入掌握 HTML5 / CSS3 / JavaScript (ES6+) / TypeScript，熟悉浏览器渲染机制、Event Loop 与 Promise / async/await 异步模型，能针对首屏加载、重绘回流、内存泄漏等场景做体系化性能治理
 
 **React 技术体系：** 精通 React Hooks 组件抽象与状态管理设计，熟练使用 React + Zustand + React Router 构建中大型 SPA/MPA，结合 Ant Design Pro / Ant Design Mobile 完成复杂中后台及移动端 H5 应用开发，具备大型应用的模块化拆分与复杂度管控能力
+
+**Vue 技术体系：** 精通 Vue 3 Composition API 与响应式系统，熟练使用 Vue + Pinia + Vue Router 构建中大型前端应用，结合 Element Plus / Vant 完成复杂中后台及移动端 H5 应用开发，具备 Vue 生态的组件设计与工程化落地能力
 
 **AI 驱动开发：** 熟练运用 Prompt 工程、Function Calling、结构化输出等 AI 工程化手段，落地 SSE/Stream 流式渲染完整前端方案；基于 LangGraph 实现多轮对话上下文隔离与流程编排，基于 LangChain 完成多模型数据格式化与 Function Calling 链路；深度使用 Claude Code / AI Coding Agent，将高频开发场景沉淀为标准化 Skill/Workflow，系统性提升研发效率
 
@@ -43,7 +43,13 @@
 
 支付宝终端设备一站式运营管理平台，覆盖海报投放 / 刷脸运营 / 设备消息 / 业务管理 / 研发配置等核心模块，支撑全国千万级线下支付设备（N5/N6/N7/蜻蜓机等）运营管理。
 
-技术栈：React + Ant Design Pro + AntV X6 + LangChain / LangGraph + NestJS
+技术栈：React + Vue 3 + Ant Design Pro + Element Plus + AntV X6 + LangChain / LangGraph + NestJS + qiankun
+
+**1. 微前端基座架构**
+负责中后台微前端架构改造，基于 qiankun 实现 React 与 Vue 多技术栈子应用共存与渐进式迁移：
+- 制定子应用接入规范与沙箱配置策略，保障多技术栈并行运行时的样式隔离与全局变量不冲突
+- 统一主子应用间的事件通信与共享依赖约定，解决跨技术栈组件复用与状态同步问题
+- 推动存量 Vue 模块与新增 React 模块并行迭代，降低技术栈迁移风险
 
 **2. 低代码表单引擎**
 基于 Formily 设计 Schema 驱动的低代码表单体系，解决通用表单能力与业务定制化之间的扩展性矛盾：
