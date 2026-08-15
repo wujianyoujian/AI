@@ -76,7 +76,7 @@ export class ConversationsService {
     role: MessageRole,
     content: string,
     reasoningContent?: string | null,
-    timing?: { ttft: number; total: number } | null,
+    timing?: { ttft: number; thinking: number; total: number } | null,
   ): Promise<Message> {
     const message = this.messagesRepository.create({
       conversationId,

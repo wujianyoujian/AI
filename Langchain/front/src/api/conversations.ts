@@ -1,21 +1,21 @@
-import { fetchAPI } from './client';
-import type { Conversation, Message } from '../types';
+import { fetchAPI } from "./client";
+import type { Conversation, Message } from "../types";
 
 export async function getConversations(): Promise<Conversation[]> {
-  const response = await fetchAPI('/conversations');
+  const response = await fetchAPI("/conversations");
   return response.json();
 }
 
 export async function createConversation(title: string): Promise<Conversation> {
-  const response = await fetchAPI('/conversations', {
-    method: 'POST',
+  const response = await fetchAPI("/conversations", {
+    method: "POST",
     body: JSON.stringify({ title }),
   });
   return response.json();
 }
 
 export async function deleteConversation(id: string): Promise<void> {
-  await fetchAPI(`/conversations/${id}`, { method: 'DELETE' });
+  await fetchAPI(`/conversations/${id}`, { method: "DELETE" });
 }
 
 export async function getMessages(conversationId: string): Promise<Message[]> {
@@ -31,16 +31,16 @@ export async function streamMessage(
   signal?: AbortSignal,
   isRetry?: boolean,
 ): Promise<ReadableStream<Uint8Array>> {
-  const response = await fetch(`/api/conversations/${conversationId}/stream`, {
-    method: 'POST',
-    credentials: 'include',
-    headers: { 'Content-Type': 'application/json' },
+  const response = await fetchAPI(`/conversations/${conversationId}/stream`, {
+    method: "POST",
+    credentials: "include",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ content, templateId, variables, isRetry }),
     signal,
   });
 
   if (!response.ok || !response.body) {
-    throw new Error('Stream failed');
+    throw new Error("Stream failed");
   }
 
   return response.body;

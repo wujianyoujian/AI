@@ -33,6 +33,7 @@ export interface Conversation {
 
 export interface MessageTiming {
   ttft: number;
+  thinking: number;
   total: number;
 }
 

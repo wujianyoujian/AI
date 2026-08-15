@@ -28,7 +28,7 @@ export class Message {
   reasoningContent: string | null;
 
   @Column({ type: 'jsonb', nullable: true })
-  timing: { ttft: number; total: number } | null;
+  timing: { ttft: number; thinking: number; total: number } | null;
 
   @CreateDateColumn({ name: 'created_at' })
   createdAt: Date;

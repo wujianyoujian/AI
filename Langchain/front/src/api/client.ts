@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env?.MODE === 'production' ? '/api' : 'http://localhost:3000';
+const API_BASE_URL = "http://localhost:3000";
 
 export async function fetchAPI(
   endpoint: string,
@@ -6,16 +6,18 @@ export async function fetchAPI(
 ): Promise<Response> {
   const response = await fetch(`${API_BASE_URL}${endpoint}`, {
     ...options,
-    credentials: 'include',
+    credentials: "include",
     headers: {
-      'Content-Type': 'application/json',
+      "Content-Type": "application/json",
       ...options.headers,
     },
   });
 
   if (!response.ok) {
-    const error = await response.json().catch(() => ({ message: 'Request failed' }));
-    throw new Error(error.message || 'Request failed');
+    const error = await response
+      .json()
+      .catch(() => ({ message: "Request failed" }));
+    throw new Error(error.message || "Request failed");
   }
 
   return response;
