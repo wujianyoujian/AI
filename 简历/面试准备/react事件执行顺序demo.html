@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="zh">
+<head>
+<meta charset="UTF-8" />
+<title>React 事件执行顺序 Demo（React 18）</title>
+<style>
+  body { font-family: system-ui, sans-serif; padding: 24px; }
+  button { display: block; margin: 12px 0; padding: 12px 20px; font-size: 16px; cursor: pointer; }
+  .tip { color: #666; font-size: 14px; line-height: 1.7; }
+  code { background: #f0f0f0; padding: 2px 6px; border-radius: 4px; }
+</style>
+</head>
+<body>
+<h3>打开控制台（F12 → Console），分别点两个按钮，对照输出顺序</h3>
+<p class="tip">
+  预期输出：<br />
+  普通按钮：<code>A → D → E → C → B</code><br />
+  stopPropagation 按钮：<code>A → F → C → B</code>（G 不会打印，但 B 会——证明合成 stopPropagation 挡不住原生冒泡）<br />
+  如果页面加载慢，把下面的 unpkg 换成 <code>https://cdn.bootcdn.net</code> 对应路径
+</p>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js"></script>
+<script src="https://unpkg.com/@babel/standalone@7.24.7/babel.min.js"></script>
+<script type="text/babel">
+
+// ===== 全局原生监听器 =====
+document.addEventListener('click', () => console.log('A. document 原生 · 捕获阶段（最先执行）'), true);
+document.addEventListener('click', () => console.log('B. document 原生 · 冒泡阶段（最后执行）'), false);
+
+function App() {
+  const rootRef = React.useRef(null);
+
+  React.useEffect(() => {
+    // 在 root 容器本身上再绑一个原生冒泡监听器（注册晚于 React 的监听器）
+    rootRef.current.addEventListener('click', () => {
+      console.log('C. root 容器原生 · 冒泡（晚于 React 监听器注册，所以后执行）');
+    });
+  }, []);
+
+  const onButtonClick = () => console.log('D. React onClick · button（合成事件，子组件）');
+  const onDivClick    = () => console.log('E. React onClick · div（合成事件，父组件，子先父后）');
+
+  const onStopClick = (e) => {
+    console.log('F. React onClick · button 内调 e.stopPropagation()');
+    e.stopPropagation(); // 只挡 React 父组件（G），挡不住原生冒泡（C、B 照常触发）
+  };
+  const onStopParentClick = () => console.log('G. React onClick · div（被 F 挡住了，不会打印）');
+
+  return (
+    <div ref={rootRef} onClick={onDivClick}>
+      <button onClick={onButtonClick}>普通按钮</button>
+      <button onClick={onStopClick}>stopPropagation 按钮</button>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
