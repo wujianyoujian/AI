@@ -1,0 +1,24 @@
+{
+  "name": "curl-policy-mcp",
+  "version": "1.0.0",
+  "description": "按域名策略放行/问询/拒绝 curl 命令的 MCP 工具",
+  "type": "module",
+  "bin": {
+    "curl-policy-mcp": "./build/index.js"
+  },
+  "files": ["build"],
+  "scripts": {
+    "build": "tsc",
+    "start": "node build/index.js",
+    "dev": "tsx src/index.ts"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.0",
+    "zod": "^3.22.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.4.0"
+  }
+}

@@ -1,0 +1,26 @@
+.subApp {
+  padding: 16px;
+  border: 2px solid #52c41a;
+  border-radius: 8px;
+  background: #fff;
+}
+.subApp h2 {
+  margin: 0 0 8px;
+  font-size: 18px;
+  color: #52c41a;
+}
+.nav {
+  display: flex;
+  gap: 12px;
+  margin: 8px 0 16px;
+}
+.nav a {
+  color: #52c41a;
+  text-decoration: none;
+}
+.page {
+  padding: 24px;
+  background: #f6ffed;
+  border-radius: 6px;
+  color: #333;
+}

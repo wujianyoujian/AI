@@ -1,0 +1,16 @@
+{
+  "name": "qiankun-demo",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "main",
+    "system",
+    "operation"
+  ],
+  "scripts": {
+    "dev": "concurrently -n main,system,operation -c green,blue,magenta \"npm run dev --workspace main\" \"npm run dev --workspace system\" \"npm run dev --workspace operation\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.0.1"
+  }
+}
